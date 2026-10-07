@@ -1,3 +1,5 @@
+# Derived in part from tomer-w/ha-nmea2000 (Apache-2.0).
+# Modified for the NMEA 0183 integration. See NOTICE and THIRD_PARTY_NOTICES.md.
 from datetime import datetime, timedelta
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.helpers.device_registry import DeviceInfo

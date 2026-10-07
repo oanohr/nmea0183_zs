@@ -2,14 +2,14 @@
   "domain": "nmea0183",
   "name": "NMEA 0183",
   "codeowners": [
-    "@tomer-w"
+    "@oanohr"
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/tomer-w/ha-nmea2000",
+  "documentation": "https://github.com/oanohr/nmea0183_zs",
   "integration_type": "hub",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/tomer-w/ha-nmea2000/issues",
+  "issue_tracker": "https://github.com/oanohr/nmea0183_zs/issues",
   "requirements": [
     "pynmea2==1.19.0"
   ],

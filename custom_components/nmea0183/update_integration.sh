@@ -1,8 +1,10 @@
 #!/bin/bash
+# Derived in part from tomer-w/ha-nmea2000 (Apache-2.0).
+# Modified for nmea0183_zs. See NOTICE and THIRD_PARTY_NOTICES.md.
 
 # ==== CONFIGURATION ====
-GITHUB_USER="tomer-w"
-GITHUB_REPO="ha-nmea0183"
+GITHUB_USER="oanohr"
+GITHUB_REPO="nmea0183_zs"
 TARGET_SUBFOLDER="custom_components/nmea0183"
 DEST_FOLDER="/config/custom_components/nmea0183"
 # ========================
