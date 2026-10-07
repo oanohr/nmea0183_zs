@@ -138,6 +138,7 @@ class Hub:
         friendly_name: str,
         value,
         unit_of_measurement: str | None,
+        numeric: bool = False,
     ) -> None:
         sensor = self.sensors.get(sensor_id)
         if sensor is None:
@@ -149,7 +150,7 @@ class Hub:
                 device_name=self.device_name,
                 update_frequncy=self.time_between_updates,
                 ttl=SENSOR_TTL,
-                is_numeric=isinstance(value, (int, float))
+                is_numeric=numeric or isinstance(value, (int, float))
                 or unit_of_measurement is not None,
             )
             _LOGGER.info("Created new sensor %s: %s", sensor_id, sensor)
@@ -177,6 +178,7 @@ class Hub:
                 reading.name,
                 reading.value,
                 reading.unit,
+                reading.numeric,
             )
 
     async def start(self, _event=None) -> None:

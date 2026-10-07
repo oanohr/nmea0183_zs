@@ -31,8 +31,8 @@ def test_gga():
     assert abs(values["gga_long_decimal"] - (10 + 49.7654321 / 60)) < 1e-7
     assert values["gga_msl"] == 45.6
     assert values["gga_gps_quality"] == 4
-    assert values["gga_lat"] == "5959.1234567 N"
-    assert values["gga_long"] == "01049.7654321 E"
+    assert values["gga_lat"] == 5959.1234567
+    assert values["gga_long"] == 1049.7654321
     assert values["gga_geoide"] == 39.1
     assert values["gga_age"] == 1.0
     assert values["gga_satview"] == 12

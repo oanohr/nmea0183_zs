@@ -17,7 +17,7 @@ This project is a fork of [tomer-w/ha-nmea2000](https://github.com/tomer-w/ha-nm
 
 | Sentence | Sensors |
 |----------|---------|
-| GGA | `gga_lat`, `gga_long` (as sent, ddmm.mmmm), `gga_lat_decimal`, `gga_long_decimal`, `gga_msl` (orthometric height), `gga_geoide`, `gga_gps_quality` (numeric), `gga_satview`, `gga_age` |
+| GGA | `gga_lat`, `gga_long` (as sent, ddmm.mmmm, numeric, negative for S/W), `gga_lat_decimal`, `gga_long_decimal`, `gga_msl` (orthometric height), `gga_geoide`, `gga_gps_quality` (numeric), `gga_satview`, `gga_age` |
 | RMC | `rmc_utc`, `rmc_status`, `rmc_speed` (kn), `rmc_course` |
 | VTG | `vtg_track_true`, `vtg_track_mag`, `vtg_speed_kn`, `vtg_speed_kmh` |
 | GSA | `gsa_fix_type`, `gsa_pdop`, `gsa_hdop`, `gsa_vdop` |

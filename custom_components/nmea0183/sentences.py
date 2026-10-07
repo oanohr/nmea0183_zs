@@ -27,6 +27,8 @@ class Reading:
     key: str
     value: str | int | float | None
     unit: str | None = None
+    # True for unitless numbers, so they get a state class (graph) even without a value yet
+    numeric: bool = False
 
     @property
     def name(self) -> str:
@@ -59,25 +61,25 @@ def _decimal(msg, attr: str) -> float | None:
         return None
 
 
-def _raw(msg, attr: str) -> str | None:
-    """The coordinate as sent (ddmm.mmmm / dddmm.mmmm) followed by the hemisphere."""
-    value = getattr(msg, attr)
-    if not value:
+def _raw(msg, attr: str) -> float | None:
+    """The coordinate as sent (ddmm.mmmm / dddmm.mmmm) as a number, negative for S and W."""
+    number = _float(getattr(msg, attr))
+    if number is None:
         return None
-    return f"{value} {getattr(msg, attr + '_dir')}".strip()
+    return -number if getattr(msg, attr + "_dir") in ("S", "W") else number
 
 
 def _gga(msg) -> list[Reading]:
     return [
-        Reading("gga_lat", _raw(msg, "lat")),
-        Reading("gga_long", _raw(msg, "lon")),
+        Reading("gga_lat", _raw(msg, "lat"), numeric=True),
+        Reading("gga_long", _raw(msg, "lon"), numeric=True),
         Reading("gga_lat_decimal", _decimal(msg, "latitude"), "°"),
         Reading("gga_long_decimal", _decimal(msg, "longitude"), "°"),
         # GGA field 9: orthometric height (MSL reference)
         Reading("gga_msl", _float(msg.altitude), "m"),
         Reading("gga_geoide", _float(msg.geo_sep), "m"),
-        Reading("gga_gps_quality", _int(msg.gps_qual)),
-        Reading("gga_satview", _int(msg.num_sats)),
+        Reading("gga_gps_quality", _int(msg.gps_qual), numeric=True),
+        Reading("gga_satview", _int(msg.num_sats), numeric=True),
         Reading("gga_age", _float(msg.age_gps_data), "s"),
     ]
 
@@ -111,9 +113,9 @@ def _gsa(msg) -> list[Reading]:
             "gsa_fix_type",
             GSA_FIX_TYPE.get(fix, str(fix)) if fix is not None else None,
         ),
-        Reading("gsa_pdop", _float(msg.pdop)),
-        Reading("gsa_hdop", _float(msg.hdop)),
-        Reading("gsa_vdop", _float(msg.vdop)),
+        Reading("gsa_pdop", _float(msg.pdop), numeric=True),
+        Reading("gsa_hdop", _float(msg.hdop), numeric=True),
+        Reading("gsa_vdop", _float(msg.vdop), numeric=True),
     ]
 
 
@@ -131,7 +133,7 @@ def _gst(msg) -> list[Reading]:
 def _gsv(msg) -> list[Reading]:
     # One sensor per constellation talker (GP, GL, GA, GB, ...)
     return [
-        Reading(f"gsv_{msg.talker.lower()}_satview", _int(msg.num_sv_in_view)),
+        Reading(f"gsv_{msg.talker.lower()}_satview", _int(msg.num_sv_in_view), numeric=True),
     ]
 
 
