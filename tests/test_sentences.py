@@ -29,10 +29,9 @@ def test_gga():
     values = _values(GGA)
     assert abs(values["latitude"] - (59 + 59.1234567 / 60)) < 1e-7
     assert abs(values["longitude"] - (10 + 49.7654321 / 60)) < 1e-7
-    assert values["altitude"] == 45.6
+    assert values["orthometric_height"] == 45.6
     assert values["fix_quality"] == "RTK fixed"
     assert values["satellites_used"] == 12
-    assert values["hdop"] == 0.8
 
 
 def test_gga_without_fix_has_no_position():

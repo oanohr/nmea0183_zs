@@ -19,7 +19,7 @@ async def test_hub_creates_sensors_from_sentence(hass):
     await hub.register_async_add_entities(add_entities)
 
     # entities are not added to hass in this test, so mark them ready
-    for sensor in (hub.state_sensor, hub.total_messages_sensor, hub.msg_per_minute_sensor):
+    for sensor in (hub.state_sensor, hub.total_messages_sensor):
         sensor._ready = True
         sensor.async_schedule_update_ha_state = MagicMock()
 
@@ -28,7 +28,7 @@ async def test_hub_creates_sensors_from_sentence(hass):
     assert hub.total_messages_sensor.native_value == 1
     assert "Test_GN_GGA_latitude" in hub.sensors
     assert hub.sensors["Test_GN_GGA_satellites_used"].native_value == 12
-    assert hub.sensors["Test_GN_GGA_altitude"].native_value == 45.6
+    assert hub.sensors["Test_GN_GGA_orthometric_height"].native_value == 45.6
 
 
 async def test_two_hubs_do_not_share_state_or_ids(hass):
@@ -40,7 +40,7 @@ async def test_two_hubs_do_not_share_state_or_ids(hass):
         entry.add_to_hass(hass)
         hub = Hub(hass, entry)
         await hub.register_async_add_entities(MagicMock())
-        for sensor in (hub.state_sensor, hub.total_messages_sensor, hub.msg_per_minute_sensor):
+        for sensor in (hub.state_sensor, hub.total_messages_sensor):
             sensor._ready = True
             sensor.async_schedule_update_ha_state = MagicMock()
         hubs.append(hub)

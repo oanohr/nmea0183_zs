@@ -9,14 +9,14 @@
     },
     "step": {
       "user": {
-        "description": "Connect to an NMEA 0183 TCP stream, e.g. an IP server port on a Septentrio mosaic-X5. You can always update this later.",
+        "description": "Connect to an NMEA 0183 TCP stream. You can always update this later.",
         "data": {
           "name": "Name",
           "host": "Receiver IP address or host name",
           "port": "TCP port number",
           "sentence_include": "Sentences to include (comma-separated, e.g. GGA,RMC)",
           "sentence_exclude": "Sentences to exclude (comma-separated)",
-          "ms_between_updates": "Number of milliseconds between updates (0=Update always)"
+          "seconds_between_updates": "Seconds between updates (0=Update always)"
         }
       }
     }
@@ -34,7 +34,7 @@
           "port": "TCP port number",
           "sentence_include": "Sentences to include (comma-separated, e.g. GGA,RMC)",
           "sentence_exclude": "Sentences to exclude (comma-separated)",
-          "ms_between_updates": "Number of milliseconds between updates (0=Update always)"
+          "seconds_between_updates": "Seconds between updates (0=Update always)"
         }
       }
     }

@@ -8,12 +8,11 @@ from homeassistant.core import callback
 
 from .const import (
     CONF_HOST,
-    CONF_MS_BETWEEN_UPDATES,
+    CONF_SECONDS_BETWEEN_UPDATES,
     CONF_PORT,
     CONF_SENTENCE_EXCLUDE,
     CONF_SENTENCE_INCLUDE,
-    DEFAULT_MS_BETWEEN_UPDATES,
-    DEFAULT_PORT,
+    DEFAULT_SECONDS_BETWEEN_UPDATES,
     DOMAIN,
 )
 
@@ -24,12 +23,12 @@ CONNECT_TEST_TIMEOUT = 5
 _COMMON_OPTIONS = {
     vol.Optional(CONF_SENTENCE_INCLUDE): str,
     vol.Optional(CONF_SENTENCE_EXCLUDE): str,
-    vol.Optional(CONF_MS_BETWEEN_UPDATES, default=DEFAULT_MS_BETWEEN_UPDATES): int,
+    vol.Optional(CONF_SECONDS_BETWEEN_UPDATES, default=DEFAULT_SECONDS_BETWEEN_UPDATES): vol.All(vol.Coerce(int), vol.Range(min=0)),
 }
 
 _CONNECTION_FIELDS = {
     vol.Required(CONF_HOST): str,
-    vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
+    vol.Required(CONF_PORT): int,
 }
 
 

@@ -25,11 +25,11 @@ from .client import Nmea0183TcpClient, State
 from .config_flow import parse_sentence_list
 from .const import (
     CONF_HOST,
-    CONF_MS_BETWEEN_UPDATES,
+    CONF_SECONDS_BETWEEN_UPDATES,
     CONF_PORT,
     CONF_SENTENCE_EXCLUDE,
     CONF_SENTENCE_INCLUDE,
-    DEFAULT_MS_BETWEEN_UPDATES,
+    DEFAULT_SECONDS_BETWEEN_UPDATES,
 )
 from .sentences import extract_readings
 
@@ -59,17 +59,14 @@ class Hub:
         self.sensors: dict[str, NMEA0183Sensor] = {}
         self._tasks: list[asyncio.Task] = []
 
-        self.message_count_per_interval = 0
-        self.last_count_time = time.time()
-        self.messages_per_minute = 0
 
         self.name = entry.data[CONF_NAME]
         self.time_between_updates = timedelta(
-            milliseconds=entry.data.get(
-                CONF_MS_BETWEEN_UPDATES, DEFAULT_MS_BETWEEN_UPDATES
+            seconds=entry.data.get(
+                CONF_SECONDS_BETWEEN_UPDATES, DEFAULT_SECONDS_BETWEEN_UPDATES
             )
         )
-        self.device_name = f"NMEA 0183 {self.name}"
+        self.device_name = self.name
 
         include = parse_sentence_list(entry.data.get(CONF_SENTENCE_INCLUDE) or "")
         exclude = parse_sentence_list(entry.data.get(CONF_SENTENCE_EXCLUDE) or "")
@@ -98,13 +95,6 @@ class Hub:
             device_name=self.device_name,
             update_frequncy=self.time_between_updates,
         )
-        self.msg_per_minute_sensor = NMEA0183Sensor(
-            sensor_id=self.name + "_messages_per_minute",
-            friendly_name="Messages per minute",
-            initial_state=0,
-            unit_of_measurement="msg/min",
-            device_name=self.device_name,
-        )
 
         self.client = Nmea0183TcpClient(
             host, port, include_sentences=include, exclude_sentences=exclude
@@ -120,26 +110,17 @@ class Hub:
         """Register the callback for adding entities and add the system sensors."""
         self.async_add_entities = async_add_entities
         self.async_add_entities(
-            [self.state_sensor, self.total_messages_sensor, self.msg_per_minute_sensor]
+            [self.state_sensor, self.total_messages_sensor]
         )
 
     async def update_tasks(self) -> None:
-        """Periodic message rate calculation and sensor availability updates."""
+        """Periodic sensor availability updates."""
         availability_interval = 300  # 5 minutes in seconds
-        message_rate_interval = 10  # 10 seconds
+        check_interval = 10  # seconds
         last_availability_update = time.time()
 
-        while not await event_wait(self.stop_event, message_rate_interval):
+        while not await event_wait(self.stop_event, check_interval):
             current_time = time.time()
-
-            elapsed_time = current_time - self.last_count_time
-            if elapsed_time > 0:
-                self.messages_per_minute = int(
-                    self.message_count_per_interval * (60 / elapsed_time)
-                )
-                self.msg_per_minute_sensor.set_state(self.messages_per_minute)
-                self.message_count_per_interval = 0
-                self.last_count_time = current_time
 
             if current_time - last_availability_update >= availability_interval:
                 for sensor in self.sensors.values():
@@ -185,7 +166,6 @@ class Hub:
             )
             return
 
-        self.message_count_per_interval += 1
         self.total_messages_sensor.set_state(
             self.total_messages_sensor.native_value + 1
         )

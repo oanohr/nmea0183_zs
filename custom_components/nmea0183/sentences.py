@@ -65,7 +65,12 @@ def _gga(msg) -> list[Reading]:
     return [
         Reading("latitude", "Latitude", _coordinate(msg, "latitude"), "°"),
         Reading("longitude", "Longitude", _coordinate(msg, "longitude"), "°"),
-        Reading("altitude", "Altitude", _float(msg.altitude), "m"),
+        Reading(
+            "orthometric_height",
+            "Orthometric height (MSL)",
+            _float(msg.altitude),
+            "m",
+        ),
         Reading("geoid_separation", "Geoid separation", _float(msg.geo_sep), "m"),
         Reading(
             "fix_quality",
@@ -73,7 +78,6 @@ def _gga(msg) -> list[Reading]:
             GPS_QUALITY.get(quality, str(quality)) if quality is not None else None,
         ),
         Reading("satellites_used", "Satellites used", _int(msg.num_sats)),
-        Reading("hdop", "HDOP", _float(msg.horizontal_dil)),
         Reading(
             "differential_age", "Differential age", _float(msg.age_gps_data), "s"
         ),

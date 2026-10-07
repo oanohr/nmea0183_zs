@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a Home Assistant custom integration that reads NMEA 0183 sentences from a TCP stream (e.g. a Septentrio mosaic-X5 IP server port) and exposes them as HA sensors.
+This is a Home Assistant custom integration that reads NMEA 0183 sentences from a TCP stream and exposes them as HA sensors.
 
 ## Project Structure
 

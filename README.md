@@ -17,7 +17,7 @@ This project is a fork of [tomer-w/ha-nmea2000](https://github.com/tomer-w/ha-nm
 
 | Sentence | Sensors |
 |----------|---------|
-| GGA | latitude, longitude, altitude, geoid separation, fix quality, satellites used, HDOP, differential age |
+| GGA | latitude, longitude, orthometric height (MSL), geoid separation, fix quality, satellites used, differential age |
 | RMC | UTC time, status, speed over ground (kn), course over ground |
 | VTG | true/magnetic track, speed (kn and km/h) |
 | GSA | fix type, PDOP, HDOP, VDOP |

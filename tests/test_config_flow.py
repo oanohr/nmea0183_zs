@@ -13,7 +13,7 @@ from custom_components.nmea0183.const import (
 )
 from custom_components.nmea0183.config_flow import parse_sentence_list
 
-USER_INPUT = {"name": "Septentrio", CONF_HOST: "192.168.3.1", CONF_PORT: 28000}
+USER_INPUT = {"name": "Boat", CONF_HOST: "192.168.3.1", CONF_PORT: 28000}
 
 
 def test_parse_sentence_list():
@@ -36,7 +36,7 @@ async def test_user_flow_creates_entry(hass):
             result["flow_id"], USER_INPUT
         )
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Septentrio"
+    assert result["title"] == "Boat"
     assert result["data"][CONF_HOST] == "192.168.3.1"
     assert result["data"][CONF_PORT] == 28000
 
@@ -79,6 +79,6 @@ async def test_user_flow_duplicate_name_differs_only_by_case(hass):
     MockConfigEntry(domain=DOMAIN, data=USER_INPUT).add_to_hass(hass)
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {**USER_INPUT, "name": "septentrio"}
+        result["flow_id"], {**USER_INPUT, "name": "boat"}
     )
     assert result["errors"]["name"] == "name_exists"
