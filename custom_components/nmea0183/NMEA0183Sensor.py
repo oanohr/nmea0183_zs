@@ -55,6 +55,8 @@ class NMEA0183Sensor(SensorEntity):
         self._attr_name = friendly_name
         self._device_name = device_name
         self._attr_native_value = initial_state
+        # What Home Assistant was last given; native_value may be newer (throttling)
+        self._written_value = initial_state
         if need_state_class:  # HA will take units only for numerical data
             self._attr_native_unit_of_measurement = unit_of_measurement
             self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -121,19 +123,23 @@ class NMEA0183Sensor(SensorEntity):
             self.async_schedule_update_ha_state()
 
     def set_state(self, new_state, ignore_tracing=False):
-        """Set the state of the sensor."""
+        """Set the state of the sensor.
+
+        The newest value is always kept in native_value. It is written to Home
+        Assistant at most once per update interval, and only if it differs from
+        what Home Assistant was last given.
+        """
         if not self._ready:
             _LOGGER.warning(
                 "skipping set_state as not ready. sensor: %s", self.entity_id
             )
             return
 
-        should_update = False
         now = datetime.now()
-        old_state = self._attr_native_value
         self._attr_native_value = new_state
         self._last_seen = now
 
+        should_update = False
         if not self._available:
             self._available = True
             should_update = True
@@ -141,25 +147,26 @@ class NMEA0183Sensor(SensorEntity):
                 _LOGGER.info("Setting sensor:'%s' as available", self.entity_id)
 
         if (not should_update) and (now - self._last_updated) < self.update_frequncy:
-            # If the update frequency is not met, bail out without any changes
+            # Too soon since the last write; the next message after the interval
+            # writes the then-current value.
             _LOGGER.debug(
                 "Skipping update for sensor:'%s' as of update frequency", self.entity_id
             )
             return
 
-        if new_state != old_state:
-            # Since the state is valid, update the sensor's state
+        if new_state != self._written_value:
             if not ignore_tracing:
                 _LOGGER.debug(
                     "Setting state for sensor: '%s' to %s from %s",
                     self.entity_id,
                     new_state,
-                    old_state,
+                    self._written_value,
                 )
             should_update = True
 
         if should_update:
             self._last_updated = now
+            self._written_value = new_state
             self.async_schedule_update_ha_state()
 
     async def async_added_to_hass(self) -> None:

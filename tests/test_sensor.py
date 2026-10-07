@@ -190,3 +190,35 @@ async def test_sensor_is_numeric_false_overrides_isinstance(hass):
     )
     assert not hasattr(sensor, "_attr_state_class")
     assert not hasattr(sensor, "_attr_native_unit_of_measurement")
+
+
+async def test_sensor_throttled_change_is_written_after_interval(hass):
+    """A value changed during the throttle window must reach HA even if it then stays equal."""
+    sensor = NMEA0183Sensor(
+        sensor_id="test_throttle",
+        friendly_name="Throttle",
+        initial_state=5,
+        device_name="Dev",
+        update_frequncy=timedelta(seconds=5),
+    )
+    sensor._ready = True
+    sensor.async_schedule_update_ha_state = MagicMock()
+
+    sensor.set_state(6)  # inside the interval: kept, not written
+    sensor.async_schedule_update_ha_state.assert_not_called()
+
+    sensor._last_updated -= timedelta(seconds=10)  # interval has passed
+    sensor.set_state(6)  # same value again, but HA still has 5
+    sensor.async_schedule_update_ha_state.assert_called_once()
+    assert sensor.native_value == 6
+
+
+async def test_sensor_without_ttl_never_expires(hass):
+    sensor = NMEA0183Sensor(
+        sensor_id="test_no_ttl", friendly_name="X", initial_state=1, device_name="Dev"
+    )
+    sensor._ready = True
+    sensor.async_schedule_update_ha_state = MagicMock()
+    sensor._last_seen -= timedelta(days=30)
+    sensor.update_availability()
+    assert sensor.available is True

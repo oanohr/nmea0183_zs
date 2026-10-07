@@ -35,10 +35,6 @@ from .sentences import extract_readings
 
 _LOGGER = logging.getLogger(__name__)
 
-# Receivers send position fixes at 1-10 Hz; flag a value as stale after this long
-# (NMEA0183Sensor multiplies the ttl by its UNAVAILABLE_FACTOR).
-SENSOR_TTL = timedelta(seconds=10)
-
 
 async def event_wait(evt, timeout):
     """Wait for an event with timeout. Returns True if the event is set."""
@@ -149,7 +145,6 @@ class Hub:
                 unit_of_measurement=unit_of_measurement,
                 device_name=self.device_name,
                 update_frequncy=self.time_between_updates,
-                ttl=SENSOR_TTL,
                 is_numeric=numeric or isinstance(value, (int, float))
                 or unit_of_measurement is not None,
             )
