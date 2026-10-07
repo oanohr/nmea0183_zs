@@ -16,6 +16,8 @@ class NMEA0183Sensor(SensorEntity):
     """Representation of a NMEA0183 sensor."""
 
     _attr_should_poll = False
+    # Prefix entity ids with the device name so several hubs do not collide
+    _attr_has_entity_name = True
 
     def __init__(
         self,

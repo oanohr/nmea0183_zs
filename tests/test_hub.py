@@ -29,3 +29,30 @@ async def test_hub_creates_sensors_from_sentence(hass):
     assert "Test_GN_GGA_latitude" in hub.sensors
     assert hub.sensors["Test_GN_GGA_satellites_used"].native_value == 12
     assert hub.sensors["Test_GN_GGA_altitude"].native_value == 45.6
+
+
+async def test_two_hubs_do_not_share_state_or_ids(hass):
+    hubs = []
+    for name in ("Boat A", "Boat B"):
+        entry = MockConfigEntry(
+            domain=DOMAIN, data={"name": name, CONF_HOST: "127.0.0.1", CONF_PORT: 1}
+        )
+        entry.add_to_hass(hass)
+        hub = Hub(hass, entry)
+        await hub.register_async_add_entities(MagicMock())
+        for sensor in (hub.state_sensor, hub.total_messages_sensor, hub.msg_per_minute_sensor):
+            sensor._ready = True
+            sensor.async_schedule_update_ha_state = MagicMock()
+        hubs.append(hub)
+
+    await hubs[0].receive_callback(pynmea2.parse(GGA))
+
+    assert hubs[0].total_messages_sensor.native_value == 1
+    assert hubs[1].total_messages_sensor.native_value == 0
+    assert hubs[1].sensors == {}
+
+    await hubs[1].receive_callback(pynmea2.parse(GGA))
+    ids_a = {s.unique_id for s in hubs[0].sensors.values()}
+    ids_b = {s.unique_id for s in hubs[1].sensors.values()}
+    assert ids_a and not ids_a & ids_b
+    assert hubs[0].device_name != hubs[1].device_name

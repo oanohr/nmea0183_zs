@@ -33,6 +33,11 @@ _CONNECTION_FIELDS = {
 }
 
 
+def _normalize(name: str) -> str:
+    """Same normalisation the sensors apply to their unique ids."""
+    return name.lower().replace(" ", "_").replace("-", "_")
+
+
 def parse_sentence_list(input_str: str) -> list[str]:
     """Parse a comma-separated list of three-letter sentence types, e.g. "GGA, rmc"."""
     sentences = []
@@ -83,9 +88,10 @@ class NMEA0183ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             existing_names = {
-                entry.data.get(CONF_NAME) for entry in self._async_current_entries()
+                _normalize(entry.data.get(CONF_NAME) or "")
+                for entry in self._async_current_entries()
             }
-            if user_input[CONF_NAME] in existing_names:
+            if _normalize(user_input[CONF_NAME]) in existing_names:
                 errors[CONF_NAME] = "name_exists"
             else:
                 errors.update(_validate_options(user_input))

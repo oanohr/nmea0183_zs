@@ -73,3 +73,12 @@ async def test_user_flow_duplicate_name(hass):
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
     assert result["errors"]["name"] == "name_exists"
+
+
+async def test_user_flow_duplicate_name_differs_only_by_case(hass):
+    MockConfigEntry(domain=DOMAIN, data=USER_INPUT).add_to_hass(hass)
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, "name": "septentrio"}
+    )
+    assert result["errors"]["name"] == "name_exists"
