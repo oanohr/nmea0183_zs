@@ -170,12 +170,11 @@ class Hub:
             self.total_messages_sensor.native_value + 1
         )
 
-        prefix = f"{self.name}_{message.talker}_{message.sentence_type}_"
-        label = f"{message.talker} {message.sentence_type}"
+        prefix = f"{self.name}_"
         for reading in extract_readings(message):
             self._update_or_create_sensor(
                 prefix + reading.key,
-                f"{label} {reading.name}",
+                reading.name,
                 reading.value,
                 reading.unit,
             )

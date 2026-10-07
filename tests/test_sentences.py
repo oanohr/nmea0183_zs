@@ -27,53 +27,57 @@ HDT = _checksum("GNHDT,274.07,T")
 
 def test_gga():
     values = _values(GGA)
-    assert abs(values["latitude"] - (59 + 59.1234567 / 60)) < 1e-7
-    assert abs(values["longitude"] - (10 + 49.7654321 / 60)) < 1e-7
-    assert values["orthometric_height"] == 45.6
-    assert values["fix_quality"] == "RTK fixed"
-    assert values["satellites_used"] == 12
+    assert abs(values["gga_lat_decimal"] - (59 + 59.1234567 / 60)) < 1e-7
+    assert abs(values["gga_long_decimal"] - (10 + 49.7654321 / 60)) < 1e-7
+    assert values["gga_msl"] == 45.6
+    assert values["gga_gps_quality"] == 4
+    assert values["gga_lat"] == "5959.1234567 N"
+    assert values["gga_long"] == "01049.7654321 E"
+    assert values["gga_geoide"] == 39.1
+    assert values["gga_age"] == 1.0
+    assert values["gga_satview"] == 12
 
 
 def test_gga_without_fix_has_no_position():
     values = _values(_checksum("GNGGA,123519.00,,,,,0,00,99.99,,M,,M,,"))
-    assert values["latitude"] is None
-    assert values["longitude"] is None
-    assert values["fix_quality"] == "No fix"
+    assert values["gga_lat_decimal"] is None
+    assert values["gga_long_decimal"] is None
+    assert values["gga_gps_quality"] == 0
 
 
 def test_rmc():
     values = _values(RMC)
-    assert values["speed_over_ground"] == 0.05
-    assert values["course_over_ground"] == 84.4
-    assert values["status"] == "Valid"
-    assert values["utc_time"].startswith("1994-03-23T12:35:19")
+    assert values["rmc_speed"] == 0.05
+    assert values["rmc_course"] == 84.4
+    assert values["rmc_status"] == "Valid"
+    assert values["rmc_utc"].startswith("1994-03-23T12:35:19")
 
 
 def test_vtg():
     values = _values(VTG)
-    assert values["track_true"] == 84.4
-    assert values["speed_knots"] == 0.05
-    assert values["speed_kmh"] == 0.09
+    assert values["vtg_track_true"] == 84.4
+    assert values["vtg_speed_kn"] == 0.05
+    assert values["vtg_speed_kmh"] == 0.09
 
 
 def test_gsa():
     values = _values(GSA)
-    assert values["fix_type"] == "3D"
-    assert values["pdop"] == 1.4
-    assert values["hdop"] == 0.8
-    assert values["vdop"] == 1.1
+    assert values["gsa_fix_type"] == "3D"
+    assert values["gsa_pdop"] == 1.4
+    assert values["gsa_hdop"] == 0.8
+    assert values["gsa_vdop"] == 1.1
 
 
 def test_gst():
     values = _values(GST)
-    assert values["std_latitude"] == 0.012
-    assert values["std_longitude"] == 0.010
-    assert values["std_altitude"] == 0.025
+    assert values["gst_std_lat"] == 0.012
+    assert values["gst_std_long"] == 0.010
+    assert values["gst_std_msl"] == 0.025
 
 
 def test_gsv_and_hdt():
-    assert _values(GSV)["satellites_in_view"] == 10
-    assert _values(HDT)["heading_true"] == 274.07
+    assert _values(GSV)["gsv_gp_satview"] == 10
+    assert _values(HDT)["hdt_heading"] == 274.07
 
 
 def test_unsupported_sentence_yields_nothing():
@@ -99,3 +103,12 @@ def test_parse_line_include_and_exclude():
     assert Nmea0183TcpClient("h", 1, include_sentences=["RMC"]).parse_line(GGA) is None
     assert Nmea0183TcpClient("h", 1, include_sentences=["GGA"]).parse_line(GGA) is not None
     assert Nmea0183TcpClient("h", 1, exclude_sentences=["GGA"]).parse_line(GGA) is None
+
+
+def test_reading_names_slugify_back_to_keys():
+    """Entity ids come from the friendly name, so its slug must equal the key."""
+    from homeassistant.util import slugify
+
+    for sentence in (GGA, RMC, VTG, GSA, GST, GSV, HDT):
+        for reading in extract_readings(pynmea2.parse(sentence)):
+            assert slugify(reading.name) == reading.key

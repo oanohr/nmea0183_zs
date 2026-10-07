@@ -26,9 +26,9 @@ async def test_hub_creates_sensors_from_sentence(hass):
     await hub.receive_callback(pynmea2.parse(GGA))
 
     assert hub.total_messages_sensor.native_value == 1
-    assert "Test_GN_GGA_latitude" in hub.sensors
-    assert hub.sensors["Test_GN_GGA_satellites_used"].native_value == 12
-    assert hub.sensors["Test_GN_GGA_orthometric_height"].native_value == 45.6
+    assert "Test_gga_lat_decimal" in hub.sensors
+    assert hub.sensors["Test_gga_satview"].native_value == 12
+    assert hub.sensors["Test_gga_msl"].native_value == 45.6
 
 
 async def test_two_hubs_do_not_share_state_or_ids(hass):

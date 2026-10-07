@@ -1,4 +1,10 @@
-"""Turn parsed NMEA 0183 sentences into sensor readings."""
+"""Turn parsed NMEA 0183 sentences into sensor readings.
+
+Reading keys follow the naming standard: <sentence>_<field>, e.g. gga_long_decimal.
+The hub prefixes the key with the hub name, which gives entity ids like
+sensor.bas_zs1477_gga_long_decimal. The talker (GP/GN/...) is deliberately not
+part of the key, so the same value from different talkers shares one sensor.
+"""
 
 from __future__ import annotations
 
@@ -11,18 +17,6 @@ _LOGGER = logging.getLogger(__name__)
 
 SUPPORTED_SENTENCES = ("GGA", "RMC", "VTG", "GSA", "GST", "GSV", "HDT")
 
-GPS_QUALITY = {
-    0: "No fix",
-    1: "GPS",
-    2: "DGPS",
-    3: "PPS",
-    4: "RTK fixed",
-    5: "RTK float",
-    6: "Dead reckoning",
-    7: "Manual",
-    8: "Simulation",
-}
-
 GSA_FIX_TYPE = {1: "No fix", 2: "2D", 3: "3D"}
 
 
@@ -31,9 +25,14 @@ class Reading:
     """One value extracted from a sentence."""
 
     key: str
-    name: str
     value: str | int | float | None
     unit: str | None = None
+
+    @property
+    def name(self) -> str:
+        """Friendly name whose slug is the key, e.g. 'GGA long decimal'."""
+        first, *rest = self.key.split("_")
+        return " ".join([first.upper(), *rest])
 
 
 def _float(value) -> float | None:
@@ -50,7 +49,7 @@ def _int(value) -> int | None:
         return None
 
 
-def _coordinate(msg, attr: str) -> float | None:
+def _decimal(msg, attr: str) -> float | None:
     """Decimal degrees, or None while the receiver has no position."""
     if not getattr(msg, attr[:3]):  # lat / lon raw field is empty without a fix
         return None
@@ -60,27 +59,26 @@ def _coordinate(msg, attr: str) -> float | None:
         return None
 
 
+def _raw(msg, attr: str) -> str | None:
+    """The coordinate as sent (ddmm.mmmm / dddmm.mmmm) followed by the hemisphere."""
+    value = getattr(msg, attr)
+    if not value:
+        return None
+    return f"{value} {getattr(msg, attr + '_dir')}".strip()
+
+
 def _gga(msg) -> list[Reading]:
-    quality = _int(msg.gps_qual)
     return [
-        Reading("latitude", "Latitude", _coordinate(msg, "latitude"), "°"),
-        Reading("longitude", "Longitude", _coordinate(msg, "longitude"), "°"),
-        Reading(
-            "orthometric_height",
-            "Orthometric height (MSL)",
-            _float(msg.altitude),
-            "m",
-        ),
-        Reading("geoid_separation", "Geoid separation", _float(msg.geo_sep), "m"),
-        Reading(
-            "fix_quality",
-            "Fix quality",
-            GPS_QUALITY.get(quality, str(quality)) if quality is not None else None,
-        ),
-        Reading("satellites_used", "Satellites used", _int(msg.num_sats)),
-        Reading(
-            "differential_age", "Differential age", _float(msg.age_gps_data), "s"
-        ),
+        Reading("gga_lat", _raw(msg, "lat")),
+        Reading("gga_long", _raw(msg, "lon")),
+        Reading("gga_lat_decimal", _decimal(msg, "latitude"), "°"),
+        Reading("gga_long_decimal", _decimal(msg, "longitude"), "°"),
+        # GGA field 9: orthometric height (MSL reference)
+        Reading("gga_msl", _float(msg.altitude), "m"),
+        Reading("gga_geoide", _float(msg.geo_sep), "m"),
+        Reading("gga_gps_quality", _int(msg.gps_qual)),
+        Reading("gga_satview", _int(msg.num_sats)),
+        Reading("gga_age", _float(msg.age_gps_data), "s"),
     ]
 
 
@@ -90,19 +88,19 @@ def _rmc(msg) -> list[Reading]:
     except (TypeError, ValueError, AttributeError):
         stamp = None
     return [
-        Reading("utc_time", "UTC time", stamp),
-        Reading("status", "Status", "Valid" if msg.status == "A" else "Warning"),
-        Reading("speed_over_ground", "Speed over ground", _float(msg.spd_over_grnd), "kn"),
-        Reading("course_over_ground", "Course over ground", _float(msg.true_course), "°"),
+        Reading("rmc_utc", stamp),
+        Reading("rmc_status", "Valid" if msg.status == "A" else "Warning"),
+        Reading("rmc_speed", _float(msg.spd_over_grnd), "kn"),
+        Reading("rmc_course", _float(msg.true_course), "°"),
     ]
 
 
 def _vtg(msg) -> list[Reading]:
     return [
-        Reading("track_true", "True track", _float(msg.true_track), "°"),
-        Reading("track_magnetic", "Magnetic track", _float(msg.mag_track), "°"),
-        Reading("speed_knots", "Speed", _float(msg.spd_over_grnd_kts), "kn"),
-        Reading("speed_kmh", "Speed", _float(msg.spd_over_grnd_kmph), "km/h"),
+        Reading("vtg_track_true", _float(msg.true_track), "°"),
+        Reading("vtg_track_mag", _float(msg.mag_track), "°"),
+        Reading("vtg_speed_kn", _float(msg.spd_over_grnd_kts), "kn"),
+        Reading("vtg_speed_kmh", _float(msg.spd_over_grnd_kmph), "km/h"),
     ]
 
 
@@ -110,35 +108,35 @@ def _gsa(msg) -> list[Reading]:
     fix = _int(msg.mode_fix_type)
     return [
         Reading(
-            "fix_type",
-            "Fix type",
+            "gsa_fix_type",
             GSA_FIX_TYPE.get(fix, str(fix)) if fix is not None else None,
         ),
-        Reading("pdop", "PDOP", _float(msg.pdop)),
-        Reading("hdop", "HDOP", _float(msg.hdop)),
-        Reading("vdop", "VDOP", _float(msg.vdop)),
+        Reading("gsa_pdop", _float(msg.pdop)),
+        Reading("gsa_hdop", _float(msg.hdop)),
+        Reading("gsa_vdop", _float(msg.vdop)),
     ]
 
 
 def _gst(msg) -> list[Reading]:
     return [
-        Reading("rms", "Range residual RMS", _float(msg.rms), "m"),
-        Reading("std_major", "Error ellipse semi-major", _float(msg.std_dev_major), "m"),
-        Reading("std_minor", "Error ellipse semi-minor", _float(msg.std_dev_minor), "m"),
-        Reading("std_latitude", "Latitude error (1σ)", _float(msg.std_dev_latitude), "m"),
-        Reading("std_longitude", "Longitude error (1σ)", _float(msg.std_dev_longitude), "m"),
-        Reading("std_altitude", "Altitude error (1σ)", _float(msg.std_dev_altitude), "m"),
+        Reading("gst_rms", _float(msg.rms), "m"),
+        Reading("gst_std_major", _float(msg.std_dev_major), "m"),
+        Reading("gst_std_minor", _float(msg.std_dev_minor), "m"),
+        Reading("gst_std_lat", _float(msg.std_dev_latitude), "m"),
+        Reading("gst_std_long", _float(msg.std_dev_longitude), "m"),
+        Reading("gst_std_msl", _float(msg.std_dev_altitude), "m"),
     ]
 
 
 def _gsv(msg) -> list[Reading]:
+    # One sensor per constellation talker (GP, GL, GA, GB, ...)
     return [
-        Reading("satellites_in_view", "Satellites in view", _int(msg.num_sv_in_view)),
+        Reading(f"gsv_{msg.talker.lower()}_satview", _int(msg.num_sv_in_view)),
     ]
 
 
 def _hdt(msg) -> list[Reading]:
-    return [Reading("heading_true", "True heading", _float(msg.heading), "°")]
+    return [Reading("hdt_heading", _float(msg.heading), "°")]
 
 
 _EXTRACTORS = {

@@ -8,7 +8,7 @@ This project is a fork of [tomer-w/ha-nmea2000](https://github.com/tomer-w/ha-nm
 
 ## ✨ Features
 
-- Automatic sensor creation per talker and sentence (e.g. `GN GGA Latitude`)
+- Sensor entity ids are `sensor.<name>_<sentence>_<field>`, e.g. `sensor.bas_zs1477_gga_long_decimal`
 - Checksum verification; invalid lines are ignored
 - Automatic reconnect if the receiver or network drops
 - Include/exclude filter on sentence types and a throttle for how often sensors update
@@ -17,13 +17,13 @@ This project is a fork of [tomer-w/ha-nmea2000](https://github.com/tomer-w/ha-nm
 
 | Sentence | Sensors |
 |----------|---------|
-| GGA | latitude, longitude, orthometric height (MSL), geoid separation, fix quality, satellites used, differential age |
-| RMC | UTC time, status, speed over ground (kn), course over ground |
-| VTG | true/magnetic track, speed (kn and km/h) |
-| GSA | fix type, PDOP, HDOP, VDOP |
-| GST | pseudorange RMS, error ellipse, latitude/longitude/altitude 1σ error |
-| GSV | satellites in view (per constellation talker) |
-| HDT | true heading |
+| GGA | `gga_lat`, `gga_long` (as sent, ddmm.mmmm), `gga_lat_decimal`, `gga_long_decimal`, `gga_msl` (orthometric height), `gga_geoide`, `gga_gps_quality` (numeric), `gga_satview`, `gga_age` |
+| RMC | `rmc_utc`, `rmc_status`, `rmc_speed` (kn), `rmc_course` |
+| VTG | `vtg_track_true`, `vtg_track_mag`, `vtg_speed_kn`, `vtg_speed_kmh` |
+| GSA | `gsa_fix_type`, `gsa_pdop`, `gsa_hdop`, `gsa_vdop` |
+| GST | `gst_rms`, `gst_std_major`, `gst_std_minor`, `gst_std_lat`, `gst_std_long`, `gst_std_msl` |
+| GSV | `gsv_<talker>_satview` (one per constellation) |
+| HDT | `hdt_heading` |
 
 Other sentences are counted in the message statistics but produce no sensors.
 
