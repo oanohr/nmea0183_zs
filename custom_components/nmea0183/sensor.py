@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.const import CONF_NAME
 
-from custom_components.nmea2000.hub import Hub
+from custom_components.nmea0183.hub import Hub
 
 # Setting up logging and configuring constants and default values
 
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    _LOGGER.debug("NMEA2000 %s async_setup_entry", entry.data[CONF_NAME])
+    _LOGGER.debug("NMEA0183 %s async_setup_entry", entry.data[CONF_NAME])
 
     hub: Hub = entry.runtime_data
     await hub.register_async_add_entities(async_add_entities)

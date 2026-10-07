@@ -2,9 +2,9 @@
 
 # ==== CONFIGURATION ====
 GITHUB_USER="tomer-w"
-GITHUB_REPO="ha-nmea2000"
-TARGET_SUBFOLDER="custom_components/nmea2000"
-DEST_FOLDER="/config/custom_components/nmea2000"
+GITHUB_REPO="ha-nmea0183"
+TARGET_SUBFOLDER="custom_components/nmea0183"
+DEST_FOLDER="/config/custom_components/nmea0183"
 # ========================
 # Usage:
 # Run the script without arguments to update the integration.

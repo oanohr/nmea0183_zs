@@ -1,0 +1,10 @@
+DOMAIN = "nmea0183"
+
+CONF_HOST = "host"
+CONF_PORT = "port"
+CONF_SENTENCE_INCLUDE = "sentence_include"
+CONF_SENTENCE_EXCLUDE = "sentence_exclude"
+CONF_MS_BETWEEN_UPDATES = "ms_between_updates"
+
+DEFAULT_PORT = 28000
+DEFAULT_MS_BETWEEN_UPDATES = 5000

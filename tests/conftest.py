@@ -1,4 +1,4 @@
-"""Fixtures for ha-nmea2000 tests."""
+"""Fixtures for ha-nmea0183 tests."""
 import pytest
 from unittest.mock import patch
 
@@ -15,7 +15,6 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 def bypass_setup_entry():
     """Prevent async_setup_entry from running during config flow tests."""
     with patch(
-        "custom_components.nmea2000.async_setup_entry", return_value=True
+        "custom_components.nmea0183.async_setup_entry", return_value=True
     ):
         yield
-

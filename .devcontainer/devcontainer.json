@@ -1,5 +1,5 @@
 {
-    "name": "ha-nmea2000",
+    "name": "ha-nmea0183",
     "image": "mcr.microsoft.com/devcontainers/python:3.13",
     "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt && pip install -r requirements_test.txt",
     "customizations": {

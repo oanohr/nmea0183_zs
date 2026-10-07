@@ -12,8 +12,8 @@ UNAVAILABLE_FACTOR = 10
 
 
 # SmartSensor class representing a basic sensor entity with state
-class NMEA2000Sensor(SensorEntity):
-    """Representation of a NMEA2000 sensor."""
+class NMEA0183Sensor(SensorEntity):
+    """Representation of a NMEA0183 sensor."""
 
     _attr_should_poll = False
 
@@ -37,7 +37,7 @@ class NMEA2000Sensor(SensorEntity):
             else isinstance(initial_state, (int, float))
         )
         _LOGGER.info(
-            "Initializing NMEA2000Sensor: sensor_id=%s, friendly_name=%s, initial_state: %s (%s), unit_of_measurement=%s, device_name=%s, via_device=%s, update_frequncy=%s, ttl=%s, need_state_class=%s",
+            "Initializing NMEA0183Sensor: sensor_id=%s, friendly_name=%s, initial_state: %s (%s), unit_of_measurement=%s, device_name=%s, via_device=%s, update_frequncy=%s, ttl=%s, need_state_class=%s",
             sensor_id,
             friendly_name,
             initial_state,
@@ -58,7 +58,7 @@ class NMEA2000Sensor(SensorEntity):
             self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._device_name)},
-            manufacturer=manufacturer if manufacturer is not None else "NMEA 2000",
+            manufacturer=manufacturer if manufacturer is not None else "NMEA 0183",
             model=device_name,
             name=device_name,
             via_device=((DOMAIN, via_device) if via_device is not None else None),
@@ -77,7 +77,7 @@ class NMEA2000Sensor(SensorEntity):
             self._available = True
 
     def __str__(self) -> str:
-        return f"NMEA2000Sensor(name={self._attr_name}, state={self._attr_native_value}, unit={getattr(self, '_attr_native_unit_of_measurement', None)}, device={self._device_name}, attr_device_info={self._attr_device_info})"
+        return f"NMEA0183Sensor(name={self._attr_name}, state={self._attr_native_value}, unit={getattr(self, '_attr_native_unit_of_measurement', None)}, device={self._device_name}, attr_device_info={self._attr_device_info})"
 
     def __repr__(self) -> str:
         return self.__str__()

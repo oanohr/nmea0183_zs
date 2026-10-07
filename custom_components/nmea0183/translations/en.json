@@ -1,0 +1,42 @@
+{
+  "title": "NMEA 0183",
+  "config": {
+    "error": {
+      "name_exists": "This device name is already in use, please choose a different one.",
+      "cannot_connect": "Could not connect to the receiver. Check the IP address, the port and that an NMEA output is enabled on that port.",
+      "sentence_not_valid": "Sentence list is invalid. Should be a comma separated list of three-letter types, e.g. GGA,RMC.",
+      "include_exclude_only_one": "Only one of [Include sentences, Exclude sentences] can be specified."
+    },
+    "step": {
+      "user": {
+        "description": "Connect to an NMEA 0183 TCP stream, e.g. an IP server port on a Septentrio mosaic-X5. You can always update this later.",
+        "data": {
+          "name": "Name",
+          "host": "Receiver IP address or host name",
+          "port": "TCP port number",
+          "sentence_include": "Sentences to include (comma-separated, e.g. GGA,RMC)",
+          "sentence_exclude": "Sentences to exclude (comma-separated)",
+          "ms_between_updates": "Number of milliseconds between updates (0=Update always)"
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "sentence_not_valid": "Sentence list is invalid. Should be a comma separated list of three-letter types, e.g. GGA,RMC.",
+      "include_exclude_only_one": "Only one of [Include sentences, Exclude sentences] can be specified."
+    },
+    "step": {
+      "init": {
+        "description": "Update the connection parameters and which sentences to include or exclude.",
+        "data": {
+          "host": "Receiver IP address or host name",
+          "port": "TCP port number",
+          "sentence_include": "Sentences to include (comma-separated, e.g. GGA,RMC)",
+          "sentence_exclude": "Sentences to exclude (comma-separated)",
+          "ms_between_updates": "Number of milliseconds between updates (0=Update always)"
+        }
+      }
+    }
+  }
+}

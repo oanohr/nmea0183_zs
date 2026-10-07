@@ -1,84 +1,46 @@
-# 🚢 Home Assistant NMEA 2000 Integration
+# 📡 Home Assistant NMEA 0183 Integration
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
-[![Validate](https://github.com/tomer-w/ha-victron-mqtt/actions/workflows/validate.yaml/badge.svg)](https://github.com/tomer-w/ha-victron-mqtt/actions/workflows/validate.yaml)
 
-> Transform your boat's NMEA 2000 network into powerful Home Assistant sensors instantly!
+A Home Assistant integration that reads NMEA 0183 sentences from a plain TCP stream and turns them into sensors. Built for GNSS receivers such as the [Septentrio mosaic-X5](https://www.septentrio.com/en/products/gnss-receivers/gnss-receiver-modules/mosaic-x5), but works with any source that serves NMEA 0183 over TCP. Parsing is done with [pynmea2](https://github.com/Knio/pynmea2).
 
-A Home Assistant integration that brings marine data to your smart home. Automatically detect and convert NMEA 2000 messages into Home Assistant sensors with zero configuration. Works with USB, TCP, and python-can CAN bus gateways. Based on pure Python NMEA 2000 [package](https://pypi.org/project/nmea2000/) built over [canboat](https://github.com/canboat/canboat) database.
+This project is a fork of [tomer-w/ha-nmea2000](https://github.com/tomer-w/ha-nmea2000), rewritten for NMEA 0183.
 
 ## ✨ Features
 
-- **Plug & Play** - Automatic sensor creation from detected messages
-- **USB gateways**: CANBUS USB devices like [Waveshare USB-CAN-A](https://www.waveshare.com/wiki/USB-CAN-A)
-- **CAN adapter gateways**: Any generic USB or SocketCAN device supported by [python-can](https://python-can.readthedocs.io/) (e.g. Canable, Seeedstudio, SocketCAN on Linux/Raspberry Pi)
-- **TCP gateways**: CANBUS TCP devices like:
-     - [EBYTE ECAN-W01S](https://www.cdebyte.com/products/ECAN-W01S)
-     - [EBYTE ECAN-E01](https://www.cdebyte.com/products/ECAN-E01)
-     - [Actisense W2K-1](https://actisense.com/products/w2k-1-nmea-2000-wifi-gateway/)
-     - [Yacht Devices YDEN-02](https://yachtdevicesus.com/products/nmea-2000-ethernet-gateway-yden-02)
-- **Real-time Data** - Instant marine metrics in your Home Assistant dashboard
-- **Low Resource Usage** - Optimized performance with minimal overhead
-- **Marine-focused** - Specially designed for boating enthusiasts
+- Automatic sensor creation per talker and sentence (e.g. `GN GGA Latitude`)
+- Checksum verification; invalid lines are ignored
+- Automatic reconnect if the receiver or network drops
+- Include/exclude filter on sentence types and a throttle for how often sensors update
 
-## 🔧 Installation
+### Supported sentences
 
-### Prerequisites
-- A working Home Assistant installation
-- NMEA 2000 network with compatible gateway (USB, CAN adapter, or TCP)
+| Sentence | Sensors |
+|----------|---------|
+| GGA | latitude, longitude, altitude, geoid separation, fix quality, satellites used, HDOP, differential age |
+| RMC | UTC time, status, speed over ground (kn), course over ground |
+| VTG | true/magnetic track, speed (kn and km/h) |
+| GSA | fix type, PDOP, HDOP, VDOP |
+| GST | pseudorange RMS, error ellipse, latitude/longitude/altitude 1σ error |
+| GSV | satellites in view (per constellation talker) |
+| HDT | true heading |
+
+Other sentences are counted in the message statistics but produce no sensors.
+
+## 🔧 Receiver setup (Septentrio mosaic-X5)
+
+The receiver must serve NMEA 0183 on a TCP (IP server) port. In the mosaic-X5 web UI, configure an IP server port and an NMEA output stream on it with the sentences you want (see the Septentrio mosaic-X5 Reference Guide for the exact commands). Enable at least `GGA` and `RMC`; add `GST` if you want the receiver's own precision estimate.
 
 
-### 🛠 Option 1: Installation via HACS
+## 🛠 Installation
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=tomer-w&repository=ha-nmea2000)
-
-Restart Home Assistant when prompted.  
-
-### 🛠 Option 2: Manual Installation
-
-1. Download the latest release ZIP file:  
-   📦 [ha-nmea2000.zip](https://github.com/tomer-w/ha-nmea2000/releases/latest/download/ha-nmea2000.zip)
-2. Extract the contents into your Home Assistant `custom_components` directory:
-
-   ```bash
-   mkdir -p /config/custom_components/nmea2000
-   unzip ha-nmea2000.zip -d /config/custom_components/nmea2000
-   ```
-3. Restart Home Assistant.
-
-## 🛠 Add the integration
-1. Go to Settings → Devices & Services → + Add Integration and search for NMEA 2000. Or, press the link below:  
-[![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=nmea2000)
-2. Click the **ADD HUB** button
-3. Choose a name and select the gateway type: USB, TCP, or CAN.
-4. Based on the gateway type, configure connection parameters (USB port, TCP IP/port, or CAN interface/channel/bitrate)
-2. **Customize**: Choose what PGNs to monitor and in what cadance you want the updates
-
-### 🛠 Script-Based Update (For Limited Bandwidth Environments)
-If you prefer not to use HACS due to bandwidth constraints, especially in marine environments, you can use the provided update script to manually update the integration after it was installed for the first time.
-
-1. Open the HA Terminal window.
-2. For the first time only, you need to give the script execution permissions:
-   ```bash
-   chmod +x /config/custom_components/nmea2000/update_integration.sh
-   ```
-2. Run the script using a terminal:
-   ```bash
-   /config/custom_components/nmea2000/update_integration.sh
-   ```
-3. Optionally, use the `--restart` flag to restart Home Assistant after the update:
-   ```bash
-   /config/custom_components/nmea2000/update_integration.sh --restart
-   ```
-   This will validate the Home Assistant configuration and issue a restart command if the configuration is valid.
-
-4. Restart Home Assistant manually if you did not use the `--restart` flag.
-
-This script will fetch the latest version of the integration directly from the repository and replace the existing files.
+1. Copy `custom_components/nmea0183` into `/config/custom_components/` (or add this repository to HACS as a custom repository).
+2. Restart Home Assistant.
+3. Go to Settings → Devices & Services → + Add Integration and search for **NMEA 0183**.
+4. Enter a name, the receiver's IP address and the TCP port. The integration checks that it can connect.
+5. Optionally restrict which sentences to use (e.g. include `GGA,RMC`) and set the minimum number of milliseconds between sensor updates.
 
 # Acknowledgements
 
-- This library leverages the [canboat](https://github.com/canboat/canboat) via [nmea2000](https://github.com/tomer-w/nmea2000) as the source for all PGN data.
-- Special thanks to Rob from [Smart Boat Innovations](https://github.com/SmartBoatInnovations/). His code was the initial inspiration for this project. Some the code here might still be based on his latest OSS version.
- - To all the incredible contributors to the [canboat](https://github.com/canboat/canboat) project — your relentless innovation keeps the lights on. Without your continuous hacking, we'd be adrift in the dark. Thank you!
+- Forked from [tomer-w/ha-nmea2000](https://github.com/tomer-w/ha-nmea2000). Thanks to Rob from [Smart Boat Innovations](https://github.com/SmartBoatInnovations/) whose code was the initial inspiration for that project.
+- NMEA 0183 parsing by [pynmea2](https://github.com/Knio/pynmea2).
