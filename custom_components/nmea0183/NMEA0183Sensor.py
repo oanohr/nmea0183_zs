@@ -1,3 +1,5 @@
+# Derived in part from tomer-w/ha-nmea2000 (Apache-2.0).
+# Modified for the NMEA 0183 integration. See NOTICE and THIRD_PARTY_NOTICES.md.
 from collections.abc import Callable
 from datetime import datetime, timedelta
 import time
