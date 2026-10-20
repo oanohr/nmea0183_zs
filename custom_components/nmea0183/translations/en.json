@@ -5,7 +5,9 @@
       "name_exists": "This device name is already in use, please choose a different one.",
       "cannot_connect": "Could not connect to the receiver. Check the IP address, the port and that an NMEA output is enabled on that port.",
       "sentence_not_valid": "Sentence list is invalid. Should be a comma separated list of three-letter types, e.g. GGA,RMC.",
-      "include_exclude_only_one": "Only one of [Include sentences, Exclude sentences] can be specified."
+      "include_exclude_only_one": "Only one of [Include sentences, Exclude sentences] can be specified.",
+      "name_required": "Enter a name for this receiver.",
+      "host_required": "Enter the receiver IP address or host name."
     },
     "step": {
       "user": {
@@ -26,7 +28,8 @@
   "options": {
     "error": {
       "sentence_not_valid": "Sentence list is invalid. Should be a comma separated list of three-letter types, e.g. GGA,RMC.",
-      "include_exclude_only_one": "Only one of [Include sentences, Exclude sentences] can be specified."
+      "include_exclude_only_one": "Only one of [Include sentences, Exclude sentences] can be specified.",
+      "host_required": "Enter the receiver IP address or host name."
     },
     "step": {
       "init": {
