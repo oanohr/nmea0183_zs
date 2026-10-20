@@ -1,9 +1,6 @@
 {
   "domain": "nmea0183",
   "name": "NMEA 0183",
-  "categories": [
-    "presence_location.trackers"
-  ],
   "codeowners": [
     "@oanohr"
   ],
