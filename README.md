@@ -103,6 +103,26 @@ The receiver must serve NMEA 0183 on a TCP (IP server) port. In the mosaic-X5 we
 4. Enter a name, the receiver's IP address and the TCP port. The integration checks that it can connect.
 5. Optionally restrict which sentences to use (e.g. include `GGA,RMC`) and set the minimum number of milliseconds between sensor updates.
 
+## ⬆️ Upgrading
+
+1. **Back up first.** Settings > System > Backups, so a rollback restores the entities and their history too.
+2. **Update the files.** In HACS open NMEA 0183 and choose Update (or run `update_integration.sh` from the integration folder). The settings of your receivers are kept: the config entry format has not changed, and settings that are missing, such as the read and stale timeouts, use their defaults of 120 s.
+3. **Restart Home Assistant.** A reload is not enough after new files.
+4. **Check it.** Within a minute or two `State` should be `Running` and `Data state` `Fresh` (a receiver sending GGA every 30 s needs up to 30 s for the first values). Until then the other sensors are `unavailable`; that is normal after a restart.
+5. **Clean up leftovers.** Entities that the new version no longer creates stay in the entity list as unavailable. Delete them in Settings > Devices & services > Entities. Check the list below for which ones.
+
+### What changed for existing installations
+
+- Entity ids are unchanged, with one exception: the duplicate `gsa_gp_*` sensors that a few builds created are gone, and the plain `gsa_fix_type`, `gsa_pdop`, `gsa_hdop` and `gsa_vdop` carry the GPS values again.
+- New: `gga_fix` (text quality), `gsa_<system>_*` for GLONASS, Galileo and BeiDou (only if the receiver sends them), and the diagnostics download.
+- `gga_lat_decimal` and `gga_long_decimal` are `unknown` while the receiver reports no fix, where they used to show whatever coordinates were in the sentence.
+- `Total message count` now has the state class `total_increasing`. Statistics recorded earlier as `measurement` for this sensor stay as they are; Home Assistant may offer to fix the statistics of that sensor in Developer tools > Statistics.
+- The read timeout and the stale timeout default to 120 s, so a receiver that sends GGA every 30 s no longer causes a `Disconnected` every minute or two.
+
+### Rolling back
+
+Restore the backup from step 1, or in HACS choose Redownload and pick the earlier version, then restart. Entities added by the newer version stay behind as unavailable and can be deleted.
+
 # Acknowledgements
 
 - Forked from [tomer-w/ha-nmea2000](https://github.com/tomer-w/ha-nmea2000). Thanks to Rob from [Smart Boat Innovations](https://github.com/SmartBoatInnovations/) whose code was the initial inspiration for that project.
