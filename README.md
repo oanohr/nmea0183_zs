@@ -57,6 +57,32 @@ Example: host `192.168.3.1`, port `28000`, include `GGA,RMC,GSA,GST`, and the th
 
 A change to the settings reloads the integration once. Sensors keep the same entity ids across restarts and reloads.
 
+### Statistics and recorder
+
+| Sensor kind | State class | Long-term statistics |
+|-------------|-------------|----------------------|
+| `Total message count` | `total_increasing` | Yes. It restarts from 0 whenever the integration starts, and Home Assistant records that as a reset, not as a negative change. |
+| Numbers such as `gga_lat_decimal`, `gga_msl`, `gga_satview`, `gsa_hdop`, `vtg_speed_kn` | `measurement` | Yes: mean, min and max per hour. |
+| `gga_lat`, `gga_long` (raw `ddmm.mmmm`) | `measurement` | Recorded so Home Assistant draws a graph, but the mean of raw `ddmm.mmmm` values is not a position. Use the `_decimal` sensors for statistics. |
+| `gga_gps_quality`, `gga_fix` | number / none | `gga_gps_quality` is a code (4 = RTK fixed), so its mean means little. `gga_fix` holds the same as text and has no statistics. |
+| `State`, `Data state`, `rmc_status`, `gsa_*_fix_type` | none | Text; history only. |
+
+Every sensor stores a row in the history each time its value changes, at most once per "seconds between updates". With GGA every 30 s and receiver noise in the last decimals, the position sensors change on every sentence. For many sites, exclude what you do not need from the recorder in `configuration.yaml`, for example:
+
+```yaml
+recorder:
+  purge_keep_days: 10
+  exclude:
+    entity_globs:
+      - sensor.*_gga_lat
+      - sensor.*_gga_long
+      - sensor.*_gga_geoide
+      - sensor.*_gsa_*_pdop
+      - sensor.*_gsa_*_vdop
+```
+
+Units are kept as the receiver reports them (`m`, `kn`, `km/h`, `°`, `s`). The sensors have no device class on purpose: with one, Home Assistant could convert and round values for imperial users, which would hide centimetre precision.
+
 ### Bad input and diagnostics
 
 - Lines that are not NMEA, have a missing or wrong checksum, or are longer than 1024 bytes are dropped. The connection stays up and the next valid sentence is used as normal.
