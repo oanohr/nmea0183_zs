@@ -1,4 +1,5 @@
 {
   "name": "NMEA 0183 Integration",
+  "homeassistant": "2024.12.0",
   "render_readme": true
-  }
+}

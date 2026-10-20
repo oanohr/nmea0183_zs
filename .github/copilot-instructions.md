@@ -34,7 +34,7 @@ Always run tests after making code changes and before committing.
 
 ## CI/CD
 
-- `.github/workflows/validate.yaml` — Runs HACS validation, hassfest, and pytest on push/PR.
+- `.github/workflows/validate.yaml` — Runs HACS validation, hassfest, ruff lint and pytest on push/PR.
 
 ## Code Conventions
 
