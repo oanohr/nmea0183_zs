@@ -1,0 +1,49 @@
+{
+  "title": "NMEA 0183",
+  "config": {
+    "error": {
+      "name_exists": "This device name is already in use, please choose a different one.",
+      "cannot_connect": "Could not connect to the receiver. Check the IP address, the port and that an NMEA output is enabled on that port.",
+      "sentence_not_valid": "Sentence list is invalid. Should be a comma separated list of three-letter types, e.g. GGA,RMC.",
+      "include_exclude_only_one": "Only one of [Include sentences, Exclude sentences] can be specified.",
+      "name_required": "Enter a name for this receiver.",
+      "host_required": "Enter the receiver IP address or host name."
+    },
+    "step": {
+      "user": {
+        "description": "Connect to an NMEA 0183 TCP stream. You can always update this later.",
+        "data": {
+          "name": "Name",
+          "host": "Receiver IP address or host name",
+          "port": "TCP port number",
+          "sentence_include": "Sentences to include (comma-separated, e.g. GGA,RMC)",
+          "sentence_exclude": "Sentences to exclude (comma-separated)",
+          "seconds_between_updates": "Seconds between updates (0=Update always)",
+          "read_timeout": "Seconds without any data before the connection is reset (should exceed the longest sentence interval, e.g. 120 for GGA every 30 s)",
+          "stale_timeout": "Seconds without a new value before a sensor becomes unavailable"
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "sentence_not_valid": "Sentence list is invalid. Should be a comma separated list of three-letter types, e.g. GGA,RMC.",
+      "include_exclude_only_one": "Only one of [Include sentences, Exclude sentences] can be specified.",
+      "host_required": "Enter the receiver IP address or host name."
+    },
+    "step": {
+      "init": {
+        "description": "Update the connection parameters and which sentences to include or exclude.",
+        "data": {
+          "host": "Receiver IP address or host name",
+          "port": "TCP port number",
+          "sentence_include": "Sentences to include (comma-separated, e.g. GGA,RMC)",
+          "sentence_exclude": "Sentences to exclude (comma-separated)",
+          "seconds_between_updates": "Seconds between updates (0=Update always)",
+          "read_timeout": "Seconds without any data before the connection is reset (should exceed the longest sentence interval, e.g. 120 for GGA every 30 s)",
+          "stale_timeout": "Seconds without a new value before a sensor becomes unavailable"
+        }
+      }
+    }
+  }
+}

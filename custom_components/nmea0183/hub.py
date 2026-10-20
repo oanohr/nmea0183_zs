@@ -160,7 +160,16 @@ class Hub:
         if self._last_data is None:
             return
         stale = self.clock() - self._last_data >= self.stale_timeout.total_seconds()
-        self.data_state_sensor.set_state(DATA_STALE if stale else DATA_FRESH)
+        new_state = DATA_STALE if stale else DATA_FRESH
+        if new_state != self.data_state_sensor.native_value:
+            # One line per outage instead of one per sensor
+            if stale:
+                _LOGGER.warning(
+                    "%s: no data for %s s, values are unavailable until it resumes",
+                    self.name,
+                    int(self.stale_timeout.total_seconds()),
+                )
+        self.data_state_sensor.set_state(new_state)
 
     async def update_tasks(self) -> None:
         """Periodic freshness checks."""
@@ -194,7 +203,7 @@ class Hub:
                 is_numeric=numeric or isinstance(value, (int, float))
                 or unit_of_measurement is not None,
             )
-            _LOGGER.info("Created new sensor %s: %s", sensor_id, sensor)
+            _LOGGER.debug("Created new sensor %s: %s", sensor_id, sensor)
             self.async_add_entities([sensor])
             self.sensors[sensor_id] = sensor
         else:
@@ -209,6 +218,8 @@ class Hub:
             return
 
         self._last_data = self.clock()
+        if self.data_state_sensor.native_value == DATA_STALE:
+            _LOGGER.info("%s: data is flowing again", self.name)
         self.data_state_sensor.set_state(DATA_FRESH)
         self.total_messages_sensor.set_state(
             self.total_messages_sensor.native_value + 1

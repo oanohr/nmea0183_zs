@@ -43,7 +43,7 @@ class NMEA0183Sensor(SensorEntity):
             if is_numeric is not None
             else isinstance(initial_state, (int, float))
         )
-        _LOGGER.info(
+        _LOGGER.debug(
             "Initializing NMEA0183Sensor: sensor_id=%s, friendly_name=%s, initial_state: %s (%s), unit_of_measurement=%s, device_name=%s, via_device=%s, update_frequncy=%s, ttl=%s, need_state_class=%s",
             sensor_id,
             friendly_name,
@@ -84,7 +84,7 @@ class NMEA0183Sensor(SensorEntity):
 
         if initial_state is None:
             self._available = False
-            _LOGGER.info("Creating sensor: '%s' as unavailable", self._attr_name)
+            _LOGGER.debug("Creating sensor: '%s' as unavailable", self._attr_name)
         else:
             self._available = True
 
@@ -119,8 +119,9 @@ class NMEA0183Sensor(SensorEntity):
         new_availability = availability_delta < self.ttl
 
         if self._available != new_availability:
-            _LOGGER.log(
-                logging.INFO if new_availability else logging.WARNING,
+            # One line per sensor, so a stale stream would flood the log: the hub
+            # reports the outage once, and this stays at debug level.
+            _LOGGER.debug(
                 "Setting sensor:'%s' as %s. Last value %s ago",
                 self.entity_id,
                 "available" if new_availability else "unavailable",
@@ -153,7 +154,7 @@ class NMEA0183Sensor(SensorEntity):
             self._available = True
             should_update = True
             if not ignore_tracing:
-                _LOGGER.info("Setting sensor:'%s' as available", self.entity_id)
+                _LOGGER.debug("Setting sensor:'%s' as available", self.entity_id)
 
         if (not should_update) and (now - self._last_updated) < self.update_frequncy:
             # Too soon since the last write; the next message after the interval
@@ -181,11 +182,11 @@ class NMEA0183Sensor(SensorEntity):
     async def async_added_to_hass(self) -> None:
         """Called when entity is added to Home Assistant."""
         # Now self.hass is available!
-        _LOGGER.info("async_added_to_hass called on: %s", self.entity_id)
+        _LOGGER.debug("async_added_to_hass called on: %s", self.entity_id)
         await super().async_added_to_hass()
         self._ready = True
 
     async def async_will_remove_from_hass(self):
-        _LOGGER.info("async_will_remove_from_hass called on: %s", self.entity_id)
+        _LOGGER.debug("async_will_remove_from_hass called on: %s", self.entity_id)
         await super().async_will_remove_from_hass()
         self._ready = False

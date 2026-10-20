@@ -83,6 +83,13 @@ recorder:
 
 Units are kept as the receiver reports them (`m`, `kn`, `km/h`, `°`, `s`). The sensors have no device class on purpose: with one, Home Assistant could convert and round values for imperial users, which would hide centimetre precision.
 
+### Bad input and diagnostics
+
+- Lines that are not NMEA, have a missing or wrong checksum, or are longer than 1024 bytes are dropped. The connection stays up and the next valid sentence is used as normal.
+- Such lines never reach the log as text. Home Assistant gets at most one warning per 5 minutes, with counts. The same limit applies to connection failures: one warning, then a line when the connection is back.
+- Going stale is logged once per outage, not once per sensor.
+- **Settings > Devices & services > NMEA 0183 > Download diagnostics** shows what the receiver has sent: lines received, accepted, rejected for checksum, malformed, oversized, and seconds since the last accepted line. The host is redacted. These counts are separate from `Total message count`, which only counts sentences that passed the include/exclude filter.
+
 ## 🔧 Receiver setup (Septentrio mosaic-X5)
 
 The receiver must serve NMEA 0183 on a TCP (IP server) port. In the mosaic-X5 web UI, configure an IP server port and an NMEA output stream on it with the sentences you want (see the Septentrio mosaic-X5 Reference Guide for the exact commands). Enable at least `GGA` and `RMC`; add `GST` if you want the receiver's own precision estimate.
