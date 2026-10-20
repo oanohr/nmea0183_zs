@@ -2,7 +2,7 @@
   "domain": "nmea0183",
   "name": "NMEA 0183",
   "categories": [
-    "sensors"
+    "presence_location.trackers"
   ],
   "codeowners": [
     "@oanohr"
