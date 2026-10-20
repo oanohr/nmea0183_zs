@@ -17,15 +17,23 @@ This project is a fork of [tomer-w/ha-nmea2000](https://github.com/tomer-w/ha-nm
 
 | Sentence | Sensors |
 |----------|---------|
-| GGA | `gga_lat`, `gga_long` (as sent, ddmm.mmmm, numeric, negative for S/W), `gga_lat_decimal`, `gga_long_decimal`, `gga_msl` (orthometric height), `gga_geoide`, `gga_gps_quality` (numeric), `gga_satview`, `gga_age` |
+| GGA | `gga_lat`, `gga_long` (as sent, ddmm.mmmm, numeric, negative for S/W), `gga_lat_decimal`, `gga_long_decimal`, `gga_msl` (orthometric height), `gga_geoide`, `gga_gps_quality` (numeric), `gga_fix` (text), `gga_satview`, `gga_age` |
 | RMC | `rmc_utc`, `rmc_status`, `rmc_speed` (kn), `rmc_course` |
 | VTG | `vtg_track_true`, `vtg_track_mag`, `vtg_speed_kn`, `vtg_speed_kmh` |
-| GSA | `gsa_fix_type`, `gsa_pdop`, `gsa_hdop`, `gsa_vdop` |
+| GSA | `gsa_fix_type`, `gsa_pdop`, `gsa_hdop`, `gsa_vdop` (primary system), `gsa_<system>_fix_type/pdop/hdop/vdop` (one set per constellation) |
 | GST | `gst_rms`, `gst_std_major`, `gst_std_minor`, `gst_std_lat`, `gst_std_long`, `gst_std_msl` |
 | GSV | `gsv_<talker>_satview` (one per constellation) |
 | HDT | `hdt_heading` |
 
 Other sentences are counted in the message statistics but produce no sensors.
+
+### Position quality and multi-constellation DOP
+
+- **`gga_lat` / `gga_long`** are the position exactly as the receiver reported it, also when it says it has no fix.
+- **`gga_lat_decimal` / `gga_long_decimal`** are the usable position. They are `unknown` while GGA quality is 0 or missing, so a last-known position sent without a fix is not shown as current. Upgrade note: these two used to show whatever coordinates the sentence carried.
+- **`gga_fix`** names the quality: `No fix`, `GPS`, `DGPS`, `PPS`, `RTK fixed`, `RTK float`, `Estimated`, `Manual`, `Simulation`. `rmc_status` is `Valid` or `Warning`.
+- None of these describe the connection. Use `State` for the TCP link and `Data state` for freshness.
+- **GSA** gives one set of sensors per constellation: `gsa_gp_*` (GPS), `gsa_gl_*` (GLONASS), `gsa_ga_*` (Galileo), `gsa_gb_*` (BeiDou), and so on. For the combined `GN` talker the system comes from the NMEA 4.11 system ID field. The old `gsa_fix_type`, `gsa_pdop`, `gsa_hdop` and `gsa_vdop` keep their entity ids and follow GPS, or the combined `GN` solution when the receiver sends no per-system GSA. Other constellations no longer overwrite them.
 
 ## 🔧 Receiver setup (Septentrio mosaic-X5)
 
