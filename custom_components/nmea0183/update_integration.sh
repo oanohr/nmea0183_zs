@@ -1,4 +1,6 @@
 #!/bin/bash
+# Derived in part from tomer-w/ha-nmea2000 (Apache-2.0).
+# Modified for nmea0183_zs. See NOTICE and THIRD_PARTY_NOTICES.md.
 
 # ==== CONFIGURATION ====
 GITHUB_USER="oanohr"
