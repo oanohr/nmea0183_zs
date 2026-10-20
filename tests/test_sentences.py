@@ -133,30 +133,33 @@ def _gsa(talker: str, hdop: str, system: str | None = None, fix: str = "3") -> d
     return _values(_checksum(f"{talker}GSA,A,{fix},01,02,03,,,,,,,,,,1.4,{hdop},1.1{tail}"))
 
 
-def test_gsa_per_system_keys_for_separate_talkers():
+def test_gsa_primary_system_uses_the_plain_keys_and_others_get_their_own():
     gp, gl = _gsa("GP", "0.8"), _gsa("GL", "1.9")
-    assert gp["gsa_gp_hdop"] == 0.8 and gl["gsa_gl_hdop"] == 1.9
-    assert "gsa_gl_hdop" not in gp and "gsa_gp_hdop" not in gl
+    assert gp["gsa_hdop"] == 0.8 and gl["gsa_gl_hdop"] == 1.9
+    assert "gsa_gl_hdop" not in gp and "gsa_hdop" not in gl
+    assert "gsa_ga_hdop" in _gsa("GA", "1.2") and "gsa_hdop" not in _gsa("GA", "1.2")
 
 
-def test_gsa_legacy_keys_follow_primary_system_only():
-    assert _gsa("GP", "0.8")["gsa_hdop"] == 0.8
-    assert "gsa_hdop" not in _gsa("GL", "1.9")
-    assert "gsa_hdop" not in _gsa("GA", "1.2")
+def test_gsa_never_publishes_the_same_value_under_two_keys():
+    for talker, system in [("GP", None), ("GL", None), ("GN", None), ("GN", "1"), ("GN", "3")]:
+        keys = list(_gsa(talker, "0.8", system))
+        assert len(keys) == len(set(keys)) == 4
+        assert not ({"gsa_hdop", "gsa_gp_hdop"} <= set(keys))
+        assert not ({"gsa_hdop", "gsa_gn_hdop"} <= set(keys))
 
 
 def test_gsa_gn_with_system_id_splits_systems():
     gps = _gsa("GN", "0.8", "1")
     glonass = _gsa("GN", "1.9", "2")
     galileo = _gsa("GN", "1.2", "3")
-    assert gps["gsa_gp_hdop"] == 0.8 and gps["gsa_hdop"] == 0.8
+    assert gps["gsa_hdop"] == 0.8 and "gsa_gp_hdop" not in gps
     assert glonass["gsa_gl_hdop"] == 1.9 and "gsa_hdop" not in glonass
     assert galileo["gsa_ga_hdop"] == 1.2 and "gsa_hdop" not in galileo
 
 
 def test_gsa_gn_without_system_id_is_combined_solution():
     values = _gsa("GN", "0.6")
-    assert values["gsa_gn_hdop"] == 0.6 and values["gsa_hdop"] == 0.6
+    assert values["gsa_hdop"] == 0.6 and "gsa_gn_hdop" not in values
 
 
 def test_gsa_interleaved_sequence_keeps_aggregate_stable():
@@ -170,7 +173,8 @@ def test_gsa_interleaved_sequence_keeps_aggregate_stable():
 
 
 def test_gsa_no_fix_keeps_fix_type_per_system():
-    assert _gsa("GP", "99.99", fix="1")["gsa_gp_fix_type"] == "No fix"
+    assert _gsa("GP", "99.99", fix="1")["gsa_fix_type"] == "No fix"
+    assert _gsa("GL", "99.99", fix="1")["gsa_gl_fix_type"] == "No fix"
 
 
 # --- client line parsing ---

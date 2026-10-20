@@ -33,7 +33,7 @@ Other sentences are counted in the message statistics but produce no sensors.
 - **`gga_lat_decimal` / `gga_long_decimal`** are the usable position. They are `unknown` while GGA quality is 0 or missing, so a last-known position sent without a fix is not shown as current. Upgrade note: these two used to show whatever coordinates the sentence carried.
 - **`gga_fix`** names the quality: `No fix`, `GPS`, `DGPS`, `PPS`, `RTK fixed`, `RTK float`, `Estimated`, `Manual`, `Simulation`. `rmc_status` is `Valid` or `Warning`.
 - None of these describe the connection. Use `State` for the TCP link and `Data state` for freshness.
-- **GSA** gives one set of sensors per constellation: `gsa_gp_*` (GPS), `gsa_gl_*` (GLONASS), `gsa_ga_*` (Galileo), `gsa_gb_*` (BeiDou), and so on. For the combined `GN` talker the system comes from the NMEA 4.11 system ID field. The old `gsa_fix_type`, `gsa_pdop`, `gsa_hdop` and `gsa_vdop` keep their entity ids and follow GPS, or the combined `GN` solution when the receiver sends no per-system GSA. Other constellations no longer overwrite them.
+- **GSA** has one set of sensors per constellation, with no value published twice. GPS (or the combined `GN` solution, when the receiver sends no per-system GSA) uses `gsa_fix_type`, `gsa_pdop`, `gsa_hdop` and `gsa_vdop`. Every other constellation gets its own set: `gsa_gl_*` (GLONASS), `gsa_ga_*` (Galileo), `gsa_gb_*` (BeiDou), and so on, so none overwrites another. For the `GN` talker the system comes from the NMEA 4.11 system ID field. Upgrade note: for a short time a build also created a duplicate `gsa_gp_*` set; it is gone, and the leftover entities can be deleted from the entity list.
 
 ## ⏱ Receivers that send GGA every 30 seconds
 
