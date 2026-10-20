@@ -12,7 +12,7 @@ import pynmea2
 _LOGGER = logging.getLogger(__name__)
 
 CONNECT_TIMEOUT = 10
-READ_TIMEOUT = 30
+DEFAULT_READ_TIMEOUT = 120
 RECONNECT_DELAY = 5
 
 
@@ -32,6 +32,7 @@ class Nmea0183TcpClient:
         port: int,
         include_sentences: list[str] | None = None,
         exclude_sentences: list[str] | None = None,
+        read_timeout: float = DEFAULT_READ_TIMEOUT,
     ) -> None:
         self._host = host
         self._port = port
@@ -39,6 +40,7 @@ class Nmea0183TcpClient:
         self._exclude = set(exclude_sentences or [])
         self._receive_callback: Callable[[pynmea2.NMEASentence], Awaitable[None]] | None = None
         self._status_callback: Callable[[State], Awaitable[None]] | None = None
+        self._read_timeout = read_timeout
         self._stop = asyncio.Event()
 
     def set_receive_callback(
@@ -105,7 +107,7 @@ class Nmea0183TcpClient:
         await self._set_state(State.CONNECTED)
         try:
             while not self._stop.is_set():
-                raw = await asyncio.wait_for(reader.readline(), READ_TIMEOUT)
+                raw = await asyncio.wait_for(reader.readline(), self._read_timeout)
                 if not raw:
                     raise ConnectionError("connection closed by receiver")
                 msg = self.parse_line(raw.decode("ascii", errors="replace"))

@@ -10,9 +10,13 @@ from .const import (
     CONF_HOST,
     CONF_SECONDS_BETWEEN_UPDATES,
     CONF_PORT,
+    CONF_READ_TIMEOUT,
     CONF_SENTENCE_EXCLUDE,
     CONF_SENTENCE_INCLUDE,
+    CONF_STALE_TIMEOUT,
+    DEFAULT_READ_TIMEOUT,
     DEFAULT_SECONDS_BETWEEN_UPDATES,
+    DEFAULT_STALE_TIMEOUT,
     DOMAIN,
 )
 
@@ -24,6 +28,8 @@ _COMMON_OPTIONS = {
     vol.Optional(CONF_SENTENCE_INCLUDE): str,
     vol.Optional(CONF_SENTENCE_EXCLUDE): str,
     vol.Optional(CONF_SECONDS_BETWEEN_UPDATES, default=DEFAULT_SECONDS_BETWEEN_UPDATES): vol.All(vol.Coerce(int), vol.Range(min=0)),
+    vol.Optional(CONF_READ_TIMEOUT, default=DEFAULT_READ_TIMEOUT): vol.All(vol.Coerce(int), vol.Range(min=10)),
+    vol.Optional(CONF_STALE_TIMEOUT, default=DEFAULT_STALE_TIMEOUT): vol.All(vol.Coerce(int), vol.Range(min=10)),
 }
 
 _CONNECTION_FIELDS = {

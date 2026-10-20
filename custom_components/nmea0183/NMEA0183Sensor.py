@@ -1,4 +1,6 @@
+from collections.abc import Callable
 from datetime import datetime, timedelta
+import time
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.helpers.device_registry import DeviceInfo
 import logging
@@ -8,7 +10,6 @@ _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_UPDATE_INTERVAL = timedelta(minutes=5)
 INFINITE_DURATION = timedelta(days=10**6)
-UNAVAILABLE_FACTOR = 10
 
 
 # SmartSensor class representing a basic sensor entity with state
@@ -31,6 +32,7 @@ class NMEA0183Sensor(SensorEntity):
         ttl: timedelta | None = None,
         manufacturer: str | None = None,
         is_numeric: bool | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         """Initialize the sensor."""
         need_state_class = (
@@ -67,11 +69,13 @@ class NMEA0183Sensor(SensorEntity):
             name=device_name,
             via_device=((DOMAIN, via_device) if via_device is not None else None),
         )
-        self._last_updated = self._last_seen = datetime.now()
+        self._clock = clock
+        self._last_updated = datetime.now()
+        self._last_seen = clock()  # monotonic: immune to wall-clock changes
         self.update_frequncy = (
             DEFAULT_UPDATE_INTERVAL if update_frequncy is None else update_frequncy
         )
-        self.ttl = INFINITE_DURATION if ttl is None else ttl * UNAVAILABLE_FACTOR
+        self.ttl = INFINITE_DURATION if ttl is None else ttl
         self._ready = False
 
         if initial_state is None:
@@ -105,18 +109,17 @@ class NMEA0183Sensor(SensorEntity):
         """Update the availability status of the sensor."""
 
         if not self._ready:
-            _LOGGER.warning(
-                "skipping update_availability as not ready. sensor: %s", self.entity_id
-            )
             return
 
-        availability_delta = datetime.now() - self._last_seen
+        availability_delta = timedelta(seconds=self._clock() - self._last_seen)
         new_availability = availability_delta < self.ttl
 
         if self._available != new_availability:
-            _LOGGER.warning(
-                "Setting sensor:'%s' as unavailable. Didnt see a message for %s",
+            _LOGGER.log(
+                logging.INFO if new_availability else logging.WARNING,
+                "Setting sensor:'%s' as %s. Last value %s ago",
                 self.entity_id,
+                "available" if new_availability else "unavailable",
                 availability_delta,
             )
             self._available = new_availability
@@ -129,15 +132,17 @@ class NMEA0183Sensor(SensorEntity):
         Assistant at most once per update interval, and only if it differs from
         what Home Assistant was last given.
         """
+        self._attr_native_value = new_state
+        self._last_seen = self._clock()
+
         if not self._ready:
-            _LOGGER.warning(
-                "skipping set_state as not ready. sensor: %s", self.entity_id
-            )
+            # Not yet added to Home Assistant: keep the value, which HA reads when
+            # the entity is added, instead of dropping the first measurement.
+            self._written_value = new_state
+            self._available = True
             return
 
         now = datetime.now()
-        self._attr_native_value = new_state
-        self._last_seen = now
 
         should_update = False
         if not self._available:

@@ -68,9 +68,11 @@ async def test_sensor_set_state_not_ready(hass):
         initial_state=0,
         device_name="Device",
     )
+    sensor.async_schedule_update_ha_state = MagicMock()
     sensor.set_state(42)
-    # Should not update because _ready is False (never added to hass)
-    assert sensor.native_value == 0
+    # The value is kept for when the entity is added, but nothing is written to HA
+    assert sensor.native_value == 42
+    sensor.async_schedule_update_ha_state.assert_not_called()
 
 
 async def test_sensor_set_state_ready(hass):
@@ -134,8 +136,7 @@ async def test_sensor_custom_ttl(hass):
         device_name="Device",
         ttl=ttl,
     )
-    # TTL is multiplied by UNAVAILABLE_FACTOR (10)
-    assert sensor.ttl == ttl * 10
+    assert sensor.ttl == ttl
 
 
 async def test_sensor_hyphenated_id_sanitized(hass):
@@ -219,6 +220,40 @@ async def test_sensor_without_ttl_never_expires(hass):
     )
     sensor._ready = True
     sensor.async_schedule_update_ha_state = MagicMock()
-    sensor._last_seen -= timedelta(days=30)
+    sensor._last_seen -= 30 * 86400
     sensor.update_availability()
+    assert sensor.available is True
+
+
+class FakeClock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+
+async def test_sensor_expires_after_ttl_and_recovers_on_new_value(hass):
+    clock = FakeClock()
+    sensor = NMEA0183Sensor(
+        sensor_id="test_expire",
+        friendly_name="X",
+        initial_state=1,
+        device_name="Dev",
+        update_frequncy=timedelta(0),
+        ttl=timedelta(seconds=120),
+        clock=clock,
+    )
+    sensor._ready = True
+    sensor.async_schedule_update_ha_state = MagicMock()
+
+    clock.now += 119
+    sensor.update_availability()
+    assert sensor.available is True
+
+    clock.now += 2
+    sensor.update_availability()
+    assert sensor.available is False
+
+    sensor.set_state(1)  # same value, but fresh data makes it available again
     assert sensor.available is True

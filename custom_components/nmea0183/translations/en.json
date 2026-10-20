@@ -16,7 +16,9 @@
           "port": "TCP port number",
           "sentence_include": "Sentences to include (comma-separated, e.g. GGA,RMC)",
           "sentence_exclude": "Sentences to exclude (comma-separated)",
-          "seconds_between_updates": "Seconds between updates (0=Update always)"
+          "seconds_between_updates": "Seconds between updates (0=Update always)",
+          "read_timeout": "Seconds without any data before the connection is reset (should exceed the longest sentence interval, e.g. 120 for GGA every 30 s)",
+          "stale_timeout": "Seconds without a new value before a sensor becomes unavailable"
         }
       }
     }
@@ -34,7 +36,9 @@
           "port": "TCP port number",
           "sentence_include": "Sentences to include (comma-separated, e.g. GGA,RMC)",
           "sentence_exclude": "Sentences to exclude (comma-separated)",
-          "seconds_between_updates": "Seconds between updates (0=Update always)"
+          "seconds_between_updates": "Seconds between updates (0=Update always)",
+          "read_timeout": "Seconds without any data before the connection is reset (should exceed the longest sentence interval, e.g. 120 for GGA every 30 s)",
+          "stale_timeout": "Seconds without a new value before a sensor becomes unavailable"
         }
       }
     }
