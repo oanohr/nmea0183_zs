@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ==== CONFIGURATION ====
-GITHUB_USER="tomer-w"
-GITHUB_REPO="ha-nmea0183"
+GITHUB_USER="oanohr"
+GITHUB_REPO="nmea0183_zs"
 TARGET_SUBFOLDER="custom_components/nmea0183"
 DEST_FOLDER="/config/custom_components/nmea0183"
 # ========================

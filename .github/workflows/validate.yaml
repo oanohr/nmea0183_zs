@@ -29,5 +29,7 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements_test.txt
+      - name: Lint
+        run: pip install ruff && ruff check custom_components tests
       - name: Run tests
         run: pytest tests/ -v

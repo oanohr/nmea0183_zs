@@ -17,8 +17,8 @@ import time
 import pynmea2
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.const import CONF_NAME
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .NMEA0183Sensor import NMEA0183Sensor
@@ -135,8 +135,6 @@ class Hub:
         self.client.set_receive_callback(self.receive_callback)
         self.client.set_status_callback(self.status_callback)
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.stop)
-
     async def register_async_add_entities(
         self, async_add_entities: AddEntitiesCallback
     ) -> None:
@@ -234,12 +232,14 @@ class Hub:
             ),
         ]
 
-    @callback
-    async def stop(self, event: Event | None) -> None:
-        """Close resources and disconnect."""
+    async def stop(self, event: Event | None = None) -> None:
+        """Close resources and disconnect. Safe to call more than once."""
         _LOGGER.debug("NMEA0183 Hub %s closing", self.name)
         self.stop_event.set()
         self.client.stop()
-        for task in self._tasks:
+        tasks, self._tasks = self._tasks, []
+        for task in tasks:
             task.cancel()
+        # Wait for the tasks, so unload leaves nothing running behind it
+        await asyncio.gather(*tasks, return_exceptions=True)
         _LOGGER.info("NMEA0183 Hub %s closed", self.name)

@@ -135,11 +135,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             if not errors:
                 # the name is not editable here, keep it
                 new_data = {**user_input, CONF_NAME: current_data[CONF_NAME]}
+                # The update listener in __init__ reloads the entry when data changed;
+                # reloading here as well would restart the connection twice.
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=new_data
                 )
-                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-                return self.async_create_entry(title="", data=None)
+                return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
             step_id="init",
