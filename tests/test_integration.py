@@ -4,6 +4,7 @@ The cadence is scaled down: 0.3 s stands in for the 30 s GGA interval, so the
 4x read/stale timeouts of 1.2 s correspond to the production 120 s.
 """
 import asyncio
+import logging
 from unittest.mock import patch
 
 import pytest
@@ -26,6 +27,7 @@ from custom_components.nmea0183.const import (
 )
 
 from .fake_nmea_server import FakeNmeaServer
+from .test_sentences import GGA, RMC
 
 CADENCE = 0.3
 TIMEOUT = 1.2
@@ -246,3 +248,56 @@ async def test_unload_stops_all_hub_tasks(hass, server):
 
     assert all(t.done() for t in tasks)
     assert hub._tasks == []
+
+
+async def test_diagnostics_count_lines_by_kind_and_redact_the_host(hass, server):
+    from custom_components.nmea0183.diagnostics import async_get_config_entry_diagnostics
+
+    entry = make_entry(hass, server.port)
+    await setup(hass, entry)
+    await wait_for(hass, lambda: server.connections == 1)
+    await server.send("garbage")
+    await server.send(GGA[:-2] + "00")
+    await server.send()
+    await wait_for(hass, lambda: state(hass, "gga_satview") == "12")
+
+    data = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert data["config"]["host"] == "**REDACTED**"
+    assert data["connection"] == "Running"
+    assert data["data_state"] == "Fresh"
+    lines = data["lines"]
+    assert lines["lines"] == 3
+    assert lines["accepted"] == 1
+    assert lines["malformed"] == 1
+    assert lines["checksum_rejected"] == 1
+    assert lines["oversized"] == 0
+    assert 0 <= lines["seconds_since_last_accepted"] < 5
+    assert "last_accepted" not in lines  # a raw monotonic clock value means nothing
+    assert data["messages_delivered"] == 1
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_a_stale_stream_logs_the_outage_once_not_once_per_sensor(hass, server, caplog):
+    entry = make_entry(hass, server.port)
+    with caplog.at_level(logging.INFO):
+        await setup(hass, entry)
+        await wait_for(hass, lambda: server.connections == 1)
+        await server.send(RMC)
+        await server.send()
+        await wait_for(hass, lambda: state(hass, "gga_satview") == "12")
+        await wait_for(hass, lambda: state(hass, "data_state") == "Stale", timeout=5)
+        await wait_for(hass, lambda: server.connections >= 2)  # read timeout reconnected
+        await server.send()
+        await wait_for(hass, lambda: state(hass, "data_state") == "Fresh")
+
+    messages = [r.getMessage() for r in caplog.records if r.name.startswith("custom_components")]
+    assert sum("no data for" in m for m in messages) == 1
+    assert sum("data is flowing again" in m for m in messages) == 1
+    # per-sensor availability changes no longer reach warning/info level
+    noisy = [
+        r for r in caplog.records
+        if r.levelno >= logging.INFO and "Setting sensor" in r.getMessage()
+    ]
+    assert noisy == []
+    assert await hass.config_entries.async_unload(entry.entry_id)
