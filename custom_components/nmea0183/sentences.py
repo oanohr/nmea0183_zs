@@ -35,6 +35,7 @@ GGA_FIX = {
 
 # NMEA 4.11 GSA "GNSS system ID" field, used when the talker is the combined GN
 GSA_SYSTEM = {1: "gp", 2: "gl", 3: "ga", 4: "gb", 5: "gq", 6: "gi"}
+PRIMARY_GSA_SYSTEMS = ("gp", "gn")
 
 
 @dataclass(frozen=True)
@@ -150,13 +151,11 @@ def _gsa(msg) -> list[Reading]:
         ("vdop", _float(msg.vdop), True),
     )
     system = _gsa_system(msg)
-    readings = [Reading(f"gsa_{system}_{name}", value, numeric=n) for name, value, n in fields]
-    # gsa_fix_type/pdop/hdop/vdop keep their ids: they follow the primary system (GPS), or
-    # the combined GN solution when the receiver sends no per-system sentences. Other
-    # systems no longer overwrite them.
-    if system in ("gp", "gn"):
-        readings += [Reading(f"gsa_{name}", value, numeric=n) for name, value, n in fields]
-    return readings
+    # The primary system (GPS), or the combined GN solution when the receiver sends no
+    # per-system sentences, owns the plain gsa_fix_type/pdop/hdop/vdop ids. Every other
+    # system gets its own set, so none overwrites another and nothing is duplicated.
+    prefix = "gsa" if system in PRIMARY_GSA_SYSTEMS else f"gsa_{system}"
+    return [Reading(f"{prefix}_{name}", value, numeric=n) for name, value, n in fields]
 
 
 def _gst(msg) -> list[Reading]:
