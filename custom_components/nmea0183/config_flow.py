@@ -34,13 +34,21 @@ _COMMON_OPTIONS = {
 
 _CONNECTION_FIELDS = {
     vol.Required(CONF_HOST): str,
-    vol.Required(CONF_PORT): int,
+    vol.Required(CONF_PORT): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
 }
 
 
 def _normalize(name: str) -> str:
     """Same normalisation the sensors apply to their unique ids."""
     return name.lower().replace(" ", "_").replace("-", "_")
+
+
+def _trimmed(user_input: dict) -> dict:
+    """Surrounding whitespace in text fields is never meaningful."""
+    return {
+        key: value.strip() if isinstance(value, str) else value
+        for key, value in user_input.items()
+    }
 
 
 def parse_sentence_list(input_str: str) -> list[str]:
@@ -58,6 +66,8 @@ def parse_sentence_list(input_str: str) -> list[str]:
 
 def _validate_options(user_input: dict) -> dict[str, str]:
     errors = {}
+    if not user_input.get(CONF_HOST, "").strip():
+        errors[CONF_HOST] = "host_required"
     for key in (CONF_SENTENCE_INCLUDE, CONF_SENTENCE_EXCLUDE):
         if user_input.get(key):
             try:
@@ -92,14 +102,16 @@ class NMEA0183ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
+            user_input = _trimmed(user_input)
             existing_names = {
                 _normalize(entry.data.get(CONF_NAME) or "")
                 for entry in self._async_current_entries()
             }
-            if _normalize(user_input[CONF_NAME]) in existing_names:
+            if not user_input[CONF_NAME]:
+                errors[CONF_NAME] = "name_required"
+            elif _normalize(user_input[CONF_NAME]) in existing_names:
                 errors[CONF_NAME] = "name_exists"
-            else:
-                errors.update(_validate_options(user_input))
+            errors.update(_validate_options(user_input))
 
             if not errors and not await _can_connect(
                 user_input[CONF_HOST], user_input[CONF_PORT]
@@ -131,6 +143,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         errors = {}
 
         if user_input is not None:
+            user_input = _trimmed(user_input)
             errors = _validate_options(user_input)
             if not errors:
                 # the name is not editable here, keep it
