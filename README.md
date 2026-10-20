@@ -35,6 +35,28 @@ Other sentences are counted in the message statistics but produce no sensors.
 - None of these describe the connection. Use `State` for the TCP link and `Data state` for freshness.
 - **GSA** gives one set of sensors per constellation: `gsa_gp_*` (GPS), `gsa_gl_*` (GLONASS), `gsa_ga_*` (Galileo), `gsa_gb_*` (BeiDou), and so on. For the combined `GN` talker the system comes from the NMEA 4.11 system ID field. The old `gsa_fix_type`, `gsa_pdop`, `gsa_hdop` and `gsa_vdop` keep their entity ids and follow GPS, or the combined `GN` solution when the receiver sends no per-system GSA. Other constellations no longer overwrite them.
 
+## ⏱ Receivers that send GGA every 30 seconds
+
+The defaults are made for this case. Leave the two timeouts as they are unless you know the stream is slower:
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| Read timeout | 120 s | No bytes for this long: the connection is dropped and reopened. Four times the 30 s interval, so a few late or lost sentences cause no reconnect. |
+| Stale timeout | 120 s | A value older than this becomes `unavailable`, and `Data state` becomes `Stale`. |
+| Seconds between updates | 5 s | Lowest rate at which a sensor writes a new value to Home Assistant. |
+
+Example: host `192.168.3.1`, port `28000`, include `GGA,RMC,GSA,GST`, and the three values above as shown.
+
+### What the status sensors mean
+
+| Sensor | Values | Describes |
+|--------|--------|-----------|
+| `State` | `Initializing`, `Running`, `Disconnected` | The TCP connection only. |
+| `Data state` | `Waiting for data`, `Fresh`, `Stale` | Whether sentences arrive in time. A live connection with no data is `Stale`. |
+| `gga_fix`, `rmc_status` | see above | The quality of the GNSS solution. |
+
+A change to the settings reloads the integration once. Sensors keep the same entity ids across restarts and reloads.
+
 ## 🔧 Receiver setup (Septentrio mosaic-X5)
 
 The receiver must serve NMEA 0183 on a TCP (IP server) port. In the mosaic-X5 web UI, configure an IP server port and an NMEA output stream on it with the sentences you want (see the Septentrio mosaic-X5 Reference Guide for the exact commands). Enable at least `GGA` and `RMC`; add `GST` if you want the receiver's own precision estimate.

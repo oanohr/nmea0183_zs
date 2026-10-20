@@ -1,7 +1,7 @@
 """Tests for the NMEA0183Sensor entity."""
 
 from datetime import timedelta
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 from homeassistant.components.sensor import SensorStateClass
 

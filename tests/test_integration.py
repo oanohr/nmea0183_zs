@@ -8,7 +8,11 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import EVENT_STATE_CHANGED, STATE_UNAVAILABLE
+from homeassistant.const import (
+    EVENT_HOMEASSISTANT_STOP,
+    EVENT_STATE_CHANGED,
+    STATE_UNAVAILABLE,
+)
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -184,3 +188,61 @@ async def test_unload_then_setup_again_keeps_entities_unique(hass, server):
     after = {e.unique_id for e in er.async_entries_for_config_entry(registry, entry.entry_id)}
     assert after == before
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_option_change_reloads_exactly_once(hass, server):
+    entry = make_entry(hass, server.port)
+    await setup(hass, entry)
+    await wait_for(hass, lambda: server.connections == 1)
+
+    reload = hass.config_entries.async_reload
+    with patch.object(hass.config_entries, "async_reload", wraps=reload) as spy:
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            {
+                CONF_HOST: "127.0.0.1",
+                CONF_PORT: server.port,
+                CONF_SECONDS_BETWEEN_UPDATES: 7,
+                CONF_READ_TIMEOUT: 120,
+                CONF_STALE_TIMEOUT: 120,
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] == "create_entry"
+    assert spy.call_count == 1
+    assert entry.data[CONF_SECONDS_BETWEEN_UPDATES] == 7
+    assert entry.data["name"] == "Test"  # kept, the name is not editable
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_reloads_do_not_accumulate_stop_listeners(hass, server):
+    def listeners() -> int:
+        return hass.bus.async_listeners().get(EVENT_HOMEASSISTANT_STOP, 0)
+
+    entry = make_entry(hass, server.port)
+    await setup(hass, entry)
+    during = listeners()
+
+    for _ in range(3):
+        assert await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+    assert listeners() == during
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert listeners() == during - 1  # only this entry's stop listener goes away
+
+
+async def test_unload_stops_all_hub_tasks(hass, server):
+    entry = make_entry(hass, server.port)
+    await setup(hass, entry)
+    await wait_for(hass, lambda: server.connections == 1)
+    hub = entry.runtime_data
+    tasks = list(hub._tasks)
+    assert tasks and not any(t.done() for t in tasks)
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+    assert all(t.done() for t in tasks)
+    assert hub._tasks == []
