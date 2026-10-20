@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "HA-MCP": {
-      "type": "http",
-      "url": "https://nexus.nohrtech.org/api/webhook/mcp_6df20ba7137f5512e152274b308bd92b"
-    }
-  }
-}
