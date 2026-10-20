@@ -34,10 +34,11 @@ class NMEA0183Sensor(SensorEntity):
         ttl: timedelta | None = None,
         manufacturer: str | None = None,
         is_numeric: bool | None = None,
+        state_class: SensorStateClass | None = None,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         """Initialize the sensor."""
-        need_state_class = (
+        need_state_class = state_class is not None or (
             is_numeric
             if is_numeric is not None
             else isinstance(initial_state, (int, float))
@@ -63,7 +64,8 @@ class NMEA0183Sensor(SensorEntity):
         self._written_value = initial_state
         if need_state_class:  # HA will take units only for numerical data
             self._attr_native_unit_of_measurement = unit_of_measurement
-            self._attr_state_class = SensorStateClass.MEASUREMENT
+            # Sampled values are MEASUREMENT; a cumulative counter passes TOTAL_INCREASING
+            self._attr_state_class = state_class or SensorStateClass.MEASUREMENT
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._device_name)},
             manufacturer=manufacturer if manufacturer is not None else "NMEA 0183",

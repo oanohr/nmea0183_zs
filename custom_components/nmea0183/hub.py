@@ -16,6 +16,7 @@ import time
 
 import pynmea2
 
+from homeassistant.components.sensor import SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import Event, HomeAssistant
@@ -114,6 +115,9 @@ class Hub:
             device_name=self.device_name,
             update_frequncy=self.time_between_updates,
             clock=self.clock,
+            # Counts up from 0 at every start: HA reads the drop as a new cycle, so
+            # long-term statistics do not see a negative change after a restart
+            state_class=SensorStateClass.TOTAL_INCREASING,
         )
 
         self.data_state_sensor = NMEA0183Sensor(

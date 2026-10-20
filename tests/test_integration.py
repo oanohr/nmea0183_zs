@@ -246,3 +246,40 @@ async def test_unload_stops_all_hub_tasks(hass, server):
 
     assert all(t.done() for t in tasks)
     assert hub._tasks == []
+
+
+async def test_state_classes_separate_counter_measurements_and_states(hass, server):
+    entry = make_entry(hass, server.port)
+    await setup(hass, entry)
+    await wait_for(hass, lambda: server.connections == 1)
+    await server.send()
+    await wait_for(hass, lambda: state(hass, "gga_satview") == "12")
+
+    def state_class(key):
+        return hass.states.get(entity_id(hass, key)).attributes.get("state_class")
+
+    assert state_class("total_messages") == "total_increasing"
+    assert hass.states.get(entity_id(hass, "total_messages")).attributes["unit_of_measurement"] == "messages"
+    # sampled values are measurements
+    for key in ("gga_satview", "gga_lat_decimal", "gga_msl", "gga_gps_quality", "gga_lat"):
+        assert state_class(key) == "measurement", key
+    # states and text carry no statistics
+    for key in ("state", "data_state", "gga_fix"):
+        assert state_class(key) is None, key
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_message_counter_restarts_from_zero_after_a_reload(hass, server):
+    entry = make_entry(hass, server.port)
+    await setup(hass, entry)
+    await wait_for(hass, lambda: server.connections == 1)
+    await server.send()
+    await wait_for(hass, lambda: state(hass, "total_messages") == "1")
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await setup(hass, entry)
+
+    # a fresh start counts from 0 again, which a total_increasing sensor records as a reset
+    await wait_for(hass, lambda: state(hass, "total_messages") == "0")
+    assert hass.states.get(entity_id(hass, "total_messages")).attributes["state_class"] == "total_increasing"
+    assert await hass.config_entries.async_unload(entry.entry_id)

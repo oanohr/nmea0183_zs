@@ -257,3 +257,20 @@ async def test_sensor_expires_after_ttl_and_recovers_on_new_value(hass):
 
     sensor.set_state(1)  # same value, but fresh data makes it available again
     assert sensor.available is True
+
+
+def test_state_class_override_makes_a_counter_total_increasing():
+    sensor = NMEA0183Sensor(
+        sensor_id="n",
+        friendly_name="Total message count",
+        initial_state=0,
+        unit_of_measurement="messages",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    )
+    assert sensor._attr_state_class == SensorStateClass.TOTAL_INCREASING
+    assert sensor._attr_native_unit_of_measurement == "messages"
+
+
+def test_sampled_numeric_values_stay_measurements():
+    sensor = NMEA0183Sensor(sensor_id="n", friendly_name="N", initial_state=1.5, unit_of_measurement="m")
+    assert sensor._attr_state_class == SensorStateClass.MEASUREMENT
