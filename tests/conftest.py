@@ -11,9 +11,9 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     yield
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def bypass_setup_entry():
-    """Prevent async_setup_entry from running during config flow tests."""
+    """Prevent async_setup_entry from running; request this in config flow tests only."""
     with patch(
         "custom_components.nmea0183.async_setup_entry", return_value=True
     ):

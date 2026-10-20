@@ -8,6 +8,7 @@ sensors based on received data.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import contextlib
 from datetime import timedelta
 import logging
@@ -27,13 +28,23 @@ from .const import (
     CONF_HOST,
     CONF_SECONDS_BETWEEN_UPDATES,
     CONF_PORT,
+    CONF_READ_TIMEOUT,
     CONF_SENTENCE_EXCLUDE,
     CONF_SENTENCE_INCLUDE,
+    CONF_STALE_TIMEOUT,
+    DEFAULT_READ_TIMEOUT,
     DEFAULT_SECONDS_BETWEEN_UPDATES,
+    DEFAULT_STALE_TIMEOUT,
 )
 from .sentences import extract_readings
 
 _LOGGER = logging.getLogger(__name__)
+
+FRESHNESS_CHECK_INTERVAL = 10  # seconds
+
+DATA_WAITING = "Waiting for data"
+DATA_FRESH = "Fresh"
+DATA_STALE = "Stale"
 
 
 async def event_wait(evt, timeout):
@@ -46,8 +57,14 @@ async def event_wait(evt, timeout):
 class Hub:
     """NMEA 0183 Hub for managing the TCP connection and sensors."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self.hass = hass
+        self.clock = clock
         self.entry = entry
         self.stop_event = asyncio.Event()
         self.state = "Initializing"
@@ -63,6 +80,11 @@ class Hub:
             )
         )
         self.device_name = self.name
+        self.stale_timeout = timedelta(
+            seconds=entry.data.get(CONF_STALE_TIMEOUT, DEFAULT_STALE_TIMEOUT)
+        )
+        read_timeout = entry.data.get(CONF_READ_TIMEOUT, DEFAULT_READ_TIMEOUT)
+        self._last_data: float | None = None
 
         include = parse_sentence_list(entry.data.get(CONF_SENTENCE_INCLUDE) or "")
         exclude = parse_sentence_list(entry.data.get(CONF_SENTENCE_EXCLUDE) or "")
@@ -82,6 +104,7 @@ class Hub:
             initial_state=self.state,
             device_name=self.device_name,
             update_frequncy=timedelta(0),
+            clock=self.clock,
         )
         self.total_messages_sensor = NMEA0183Sensor(
             sensor_id=self.name + "_total_messages",
@@ -90,10 +113,24 @@ class Hub:
             unit_of_measurement="messages",
             device_name=self.device_name,
             update_frequncy=self.time_between_updates,
+            clock=self.clock,
+        )
+
+        self.data_state_sensor = NMEA0183Sensor(
+            sensor_id=self.name + "_data_state",
+            friendly_name="Data state",
+            initial_state=DATA_WAITING,
+            device_name=self.device_name,
+            update_frequncy=timedelta(0),
+            clock=self.clock,
         )
 
         self.client = Nmea0183TcpClient(
-            host, port, include_sentences=include, exclude_sentences=exclude
+            host,
+            port,
+            include_sentences=include,
+            exclude_sentences=exclude,
+            read_timeout=read_timeout,
         )
         self.client.set_receive_callback(self.receive_callback)
         self.client.set_status_callback(self.status_callback)
@@ -106,22 +143,27 @@ class Hub:
         """Register the callback for adding entities and add the system sensors."""
         self.async_add_entities = async_add_entities
         self.async_add_entities(
-            [self.state_sensor, self.total_messages_sensor]
+            [self.state_sensor, self.total_messages_sensor, self.data_state_sensor]
         )
 
+    def check_freshness(self) -> None:
+        """Mark sensors without a recent value unavailable, and update the data state.
+
+        Freshness depends only on when values arrived, never on the TCP state, so
+        a reconnect does not make old readings look current.
+        """
+        for sensor in self.sensors.values():
+            sensor.update_availability()
+
+        if self._last_data is None:
+            return
+        stale = self.clock() - self._last_data >= self.stale_timeout.total_seconds()
+        self.data_state_sensor.set_state(DATA_STALE if stale else DATA_FRESH)
+
     async def update_tasks(self) -> None:
-        """Periodic sensor availability updates."""
-        availability_interval = 300  # 5 minutes in seconds
-        check_interval = 10  # seconds
-        last_availability_update = time.time()
-
-        while not await event_wait(self.stop_event, check_interval):
-            current_time = time.time()
-
-            if current_time - last_availability_update >= availability_interval:
-                for sensor in self.sensors.values():
-                    sensor.update_availability()
-                last_availability_update = current_time
+        """Periodic freshness checks."""
+        while not await event_wait(self.stop_event, FRESHNESS_CHECK_INTERVAL):
+            self.check_freshness()
 
     async def status_callback(self, state: State) -> None:
         """Process changes in connection state."""
@@ -145,6 +187,8 @@ class Hub:
                 unit_of_measurement=unit_of_measurement,
                 device_name=self.device_name,
                 update_frequncy=self.time_between_updates,
+                ttl=self.stale_timeout,
+                clock=self.clock,
                 is_numeric=numeric or isinstance(value, (int, float))
                 or unit_of_measurement is not None,
             )
@@ -162,6 +206,8 @@ class Hub:
             )
             return
 
+        self._last_data = self.clock()
+        self.data_state_sensor.set_state(DATA_FRESH)
         self.total_messages_sensor.set_state(
             self.total_messages_sensor.native_value + 1
         )

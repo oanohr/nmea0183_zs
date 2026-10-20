@@ -13,6 +13,8 @@ from custom_components.nmea0183.const import (
 )
 from custom_components.nmea0183.config_flow import parse_sentence_list
 
+pytestmark = pytest.mark.usefixtures("bypass_setup_entry")
+
 USER_INPUT = {"name": "Boat", CONF_HOST: "192.168.3.1", CONF_PORT: 28000}
 
 
