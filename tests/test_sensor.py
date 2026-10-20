@@ -274,3 +274,12 @@ def test_state_class_override_makes_a_counter_total_increasing():
 def test_sampled_numeric_values_stay_measurements():
     sensor = NMEA0183Sensor(sensor_id="n", friendly_name="N", initial_state=1.5, unit_of_measurement="m")
     assert sensor._attr_state_class == SensorStateClass.MEASUREMENT
+
+
+def test_device_info_has_no_via_device_key_unless_one_is_given():
+    plain = NMEA0183Sensor(sensor_id="a", friendly_name="A", initial_state=0, device_name="Dev")
+    assert "via_device" not in plain._attr_device_info
+    linked = NMEA0183Sensor(
+        sensor_id="b", friendly_name="B", initial_state=0, device_name="Dev", via_device="Hub"
+    )
+    assert linked._attr_device_info["via_device"] == ("nmea0183", "Hub")
