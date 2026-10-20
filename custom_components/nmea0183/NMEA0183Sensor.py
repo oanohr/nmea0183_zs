@@ -66,13 +66,16 @@ class NMEA0183Sensor(SensorEntity):
             self._attr_native_unit_of_measurement = unit_of_measurement
             # Sampled values are MEASUREMENT; a cumulative counter passes TOTAL_INCREASING
             self._attr_state_class = state_class or SensorStateClass.MEASUREMENT
-        self._attr_device_info = DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, self._device_name)},
             manufacturer=manufacturer if manufacturer is not None else "NMEA 0183",
             model=device_name,
             name=device_name,
-            via_device=((DOMAIN, via_device) if via_device is not None else None),
         )
+        if via_device is not None:
+            # Only set when used: Home Assistant warns about the key even when it is None
+            device_info["via_device"] = (DOMAIN, via_device)
+        self._attr_device_info = device_info
         self._clock = clock
         self._last_updated = datetime.now()
         self._last_seen = clock()  # monotonic: immune to wall-clock changes
