@@ -3,7 +3,8 @@
 Reading keys follow the naming standard: <sentence>_<field>, e.g. gga_long_decimal.
 The hub prefixes the key with the hub name, which gives entity ids like
 sensor.bas_zs1477_gga_long_decimal. The talker (GP/GN/...) is deliberately not
-part of the key, so the same value from different talkers shares one sensor.
+part of the key for most sentences. GSV and GSA are the exception: they carry one
+sensor per constellation, because their values describe a single constellation.
 """
 
 from __future__ import annotations
@@ -18,6 +19,22 @@ _LOGGER = logging.getLogger(__name__)
 SUPPORTED_SENTENCES = ("GGA", "RMC", "VTG", "GSA", "GST", "GSV", "HDT")
 
 GSA_FIX_TYPE = {1: "No fix", 2: "2D", 3: "3D"}
+
+# GGA field 6 (GPS quality indicator)
+GGA_FIX = {
+    0: "No fix",
+    1: "GPS",
+    2: "DGPS",
+    3: "PPS",
+    4: "RTK fixed",
+    5: "RTK float",
+    6: "Estimated",
+    7: "Manual",
+    8: "Simulation",
+}
+
+# NMEA 4.11 GSA "GNSS system ID" field, used when the talker is the combined GN
+GSA_SYSTEM = {1: "gp", 2: "gl", 3: "ga", 4: "gb", 5: "gq", 6: "gi"}
 
 
 @dataclass(frozen=True)
@@ -70,15 +87,21 @@ def _raw(msg, attr: str) -> float | None:
 
 
 def _gga(msg) -> list[Reading]:
+    quality = _int(msg.gps_qual)
+    # gga_lat/gga_long are the position as reported. The decimal position is only
+    # given while the receiver claims a fix, so a last-known position sent with
+    # quality 0 is never shown as the current one.
+    usable = quality is not None and quality > 0
     return [
         Reading("gga_lat", _raw(msg, "lat"), numeric=True),
         Reading("gga_long", _raw(msg, "lon"), numeric=True),
-        Reading("gga_lat_decimal", _decimal(msg, "latitude"), "°"),
-        Reading("gga_long_decimal", _decimal(msg, "longitude"), "°"),
+        Reading("gga_lat_decimal", _decimal(msg, "latitude") if usable else None, "°"),
+        Reading("gga_long_decimal", _decimal(msg, "longitude") if usable else None, "°"),
         # GGA field 9: orthometric height (MSL reference)
         Reading("gga_msl", _float(msg.altitude), "m"),
         Reading("gga_geoide", _float(msg.geo_sep), "m"),
-        Reading("gga_gps_quality", _int(msg.gps_qual), numeric=True),
+        Reading("gga_gps_quality", quality, numeric=True),
+        Reading("gga_fix", GGA_FIX.get(quality, str(quality)) if quality is not None else None),
         Reading("gga_satview", _int(msg.num_sats), numeric=True),
         Reading("gga_age", _float(msg.age_gps_data), "s"),
     ]
@@ -106,17 +129,34 @@ def _vtg(msg) -> list[Reading]:
     ]
 
 
+def _gsa_system(msg) -> str:
+    """Constellation a GSA sentence describes: talker, or the NMEA 4.11 system ID for GN."""
+    talker = msg.talker.lower()
+    if talker != "gn":
+        return talker
+    try:
+        system_id = _int(msg.data[17])  # field after VDOP, absent before NMEA 4.11
+    except IndexError:
+        return talker
+    return GSA_SYSTEM.get(system_id, talker) if system_id is not None else talker
+
+
 def _gsa(msg) -> list[Reading]:
     fix = _int(msg.mode_fix_type)
-    return [
-        Reading(
-            "gsa_fix_type",
-            GSA_FIX_TYPE.get(fix, str(fix)) if fix is not None else None,
-        ),
-        Reading("gsa_pdop", _float(msg.pdop), numeric=True),
-        Reading("gsa_hdop", _float(msg.hdop), numeric=True),
-        Reading("gsa_vdop", _float(msg.vdop), numeric=True),
-    ]
+    fields = (
+        ("fix_type", GSA_FIX_TYPE.get(fix, str(fix)) if fix is not None else None, False),
+        ("pdop", _float(msg.pdop), True),
+        ("hdop", _float(msg.hdop), True),
+        ("vdop", _float(msg.vdop), True),
+    )
+    system = _gsa_system(msg)
+    readings = [Reading(f"gsa_{system}_{name}", value, numeric=n) for name, value, n in fields]
+    # gsa_fix_type/pdop/hdop/vdop keep their ids: they follow the primary system (GPS), or
+    # the combined GN solution when the receiver sends no per-system sentences. Other
+    # systems no longer overwrite them.
+    if system in ("gp", "gn"):
+        readings += [Reading(f"gsa_{name}", value, numeric=n) for name, value, n in fields]
+    return readings
 
 
 def _gst(msg) -> list[Reading]:

@@ -85,6 +85,94 @@ def test_unsupported_sentence_yields_nothing():
     assert extract_readings(pynmea2.parse(gll)) == []
 
 
+# --- GNSS solution validity (#6) ---
+
+def _gga(quality: str, lat="5959.1234567,N", lon="01049.7654321,E") -> dict:
+    return _values(_checksum(f"GNGGA,123519.00,{lat},{lon},{quality},12,0.8,45.6,M,39.1,M,1.0,0000"))
+
+
+def test_gga_fix_labels_rtk_fixed_and_float():
+    assert _gga("4")["gga_fix"] == "RTK fixed"
+    assert _gga("5")["gga_fix"] == "RTK float"
+    assert _gga("1")["gga_fix"] == "GPS"
+    assert _gga("4")["gga_lat_decimal"] is not None
+    assert _gga("5")["gga_lat_decimal"] is not None
+
+
+def test_gga_quality_zero_hides_decimal_position_but_keeps_raw():
+    values = _gga("0")
+    assert values["gga_fix"] == "No fix"
+    assert values["gga_lat_decimal"] is None
+    assert values["gga_long_decimal"] is None
+    assert values["gga_lat"] == 5959.1234567
+    assert values["gga_long"] == 1049.7654321
+
+
+def test_gga_missing_quality_is_unknown_and_hides_position():
+    values = _values(_checksum("GNGGA,123519.00,5959.1234567,N,01049.7654321,E,,,,,M,,M,,"))
+    assert values["gga_fix"] is None
+    assert values["gga_gps_quality"] is None
+    assert values["gga_lat_decimal"] is None
+
+
+def test_gga_missing_fields_do_not_raise():
+    values = _values(_checksum("GNGGA,,,,,,,,,,M,,M,,"))
+    assert values["gga_fix"] is None
+    assert values["gga_lat"] is None
+
+
+def test_rmc_invalid_status_is_warning():
+    values = _values(_checksum("GNRMC,123519.00,V,,,,,,,230394,,,N,V"))
+    assert values["rmc_status"] == "Warning"
+
+
+# --- multi-constellation GSA (#6) ---
+
+def _gsa(talker: str, hdop: str, system: str | None = None, fix: str = "3") -> dict:
+    tail = f",{system}" if system else ""
+    return _values(_checksum(f"{talker}GSA,A,{fix},01,02,03,,,,,,,,,,1.4,{hdop},1.1{tail}"))
+
+
+def test_gsa_per_system_keys_for_separate_talkers():
+    gp, gl = _gsa("GP", "0.8"), _gsa("GL", "1.9")
+    assert gp["gsa_gp_hdop"] == 0.8 and gl["gsa_gl_hdop"] == 1.9
+    assert "gsa_gl_hdop" not in gp and "gsa_gp_hdop" not in gl
+
+
+def test_gsa_legacy_keys_follow_primary_system_only():
+    assert _gsa("GP", "0.8")["gsa_hdop"] == 0.8
+    assert "gsa_hdop" not in _gsa("GL", "1.9")
+    assert "gsa_hdop" not in _gsa("GA", "1.2")
+
+
+def test_gsa_gn_with_system_id_splits_systems():
+    gps = _gsa("GN", "0.8", "1")
+    glonass = _gsa("GN", "1.9", "2")
+    galileo = _gsa("GN", "1.2", "3")
+    assert gps["gsa_gp_hdop"] == 0.8 and gps["gsa_hdop"] == 0.8
+    assert glonass["gsa_gl_hdop"] == 1.9 and "gsa_hdop" not in glonass
+    assert galileo["gsa_ga_hdop"] == 1.2 and "gsa_hdop" not in galileo
+
+
+def test_gsa_gn_without_system_id_is_combined_solution():
+    values = _gsa("GN", "0.6")
+    assert values["gsa_gn_hdop"] == 0.6 and values["gsa_hdop"] == 0.6
+
+
+def test_gsa_interleaved_sequence_keeps_aggregate_stable():
+    """GPS, GLONASS, Galileo interleaved: the aggregate is never overwritten by the others."""
+    latest = {}
+    for talker, hdop, system in [("GN", "0.8", "1"), ("GN", "1.9", "2"), ("GN", "1.2", "3"),
+                                 ("GN", "0.7", "1"), ("GN", "2.0", "2")]:
+        latest.update(_gsa(talker, hdop, system))
+    assert latest["gsa_hdop"] == 0.7
+    assert latest["gsa_gl_hdop"] == 2.0 and latest["gsa_ga_hdop"] == 1.2
+
+
+def test_gsa_no_fix_keeps_fix_type_per_system():
+    assert _gsa("GP", "99.99", fix="1")["gsa_gp_fix_type"] == "No fix"
+
+
 # --- client line parsing ---
 
 def test_parse_line_accepts_valid_sentence():
