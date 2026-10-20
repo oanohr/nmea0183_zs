@@ -220,7 +220,7 @@ async def test_sensor_without_ttl_never_expires(hass):
     )
     sensor._ready = True
     sensor.async_schedule_update_ha_state = MagicMock()
-    sensor._last_seen -= timedelta(days=30)
+    sensor._last_seen -= 30 * 86400
     sensor.update_availability()
     assert sensor.available is True
 

@@ -2,8 +2,12 @@
 import asyncio
 from unittest.mock import patch
 
+import pytest
+
 from custom_components.nmea0183.client import Nmea0183TcpClient, State
 from .test_sentences import GGA, RMC
+
+pytestmark = pytest.mark.usefixtures("socket_enabled")
 
 
 async def test_client_receives_sentences_and_reports_state():
