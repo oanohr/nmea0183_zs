@@ -93,7 +93,11 @@ async def test_client_reconnects_after_silence_longer_than_read_timeout():
     client.set_status_callback(on_state)
     with patch("custom_components.nmea0183.client.RECONNECT_DELAY", 0.05):
         async with server:
-            await asyncio.wait_for(client.run(), 10)
+            try:
+                await asyncio.wait_for(client.run(), 10)
+            finally:
+                for writer in connections:  # wait_closed() needs all connections closed
+                    writer.close()
 
     assert len(connections) >= 2
     assert State.DISCONNECTED in states
